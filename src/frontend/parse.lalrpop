@@ -1,0 +1,258 @@
+use crate::meerast::{ReplInput, Program, Service, Decl, Stmt, SglStmt, Expr,
+                     Uop, Binop};
+use std::str::FromStr;
+
+grammar;
+
+pub Program: Program = {
+    /* empty */ => {
+        Program::Prog { services: vec![] }
+    },
+    <s:Service> <ss:Program> => {
+        let mut ret = vec![];
+        ret.push(s);
+        let v = match ss {
+            Program::Prog { services: a } => a,
+        };
+        for i in v.into_iter() {
+            ret.push(i);
+        }
+        Program::Prog { services: ret }
+    },
+}
+
+pub Service: Service = {
+    "service" <name:r"[a-z_A-Z][0-9_a-z_A-Z]*"> "{" <ds:Decls> "}" => {
+        Service::Srv { name: String::from(name), decls: ds }
+    },
+}
+
+pub Decls: Vec<Decl> = {
+    /* empty */ => {
+        vec![]
+    },
+    <d:Decl> <ds:Decls> => {
+        let mut ret = vec![];
+        ret.push(d);
+        for i in ds.into_iter() {
+            ret.push(i);
+        }
+        ret
+    },
+}
+
+pub Decl: Decl = {
+    "import" <name:r"[a-z_A-Z][0-9_a-z_A-Z]*"> => {
+        Decl::Import { srv_name: String::from(name) }
+    },
+    "var" <name:r"[a-z_A-Z][0-9_a-z_A-Z]*"> "=" <e:Expr> => {
+        Decl::VarDecl { name: String::from(name), val: *e }
+    },
+    "pub" "def" <name:r"[a-z_A-Z][0-9_a-z_A-Z]*"> "=" <e:Expr> => {
+        Decl::DefDecl { name: String::from(name), val: *e, is_pub: true }
+    },
+    "def" <name:r"[a-z_A-Z][0-9_a-z_A-Z]*"> "=" <e:Expr> => {
+        Decl::DefDecl { name: String::from(name), val: *e, is_pub: false }
+    },
+}
+
+pub Stmt: Stmt = {
+    /* empty */ => {
+        Stmt::Stmt { sgl_stmts: vec![] }
+    },
+    <s:SglStmt> <rs:RestStmt> => {
+        let mut ret = vec![];
+        ret.push(s);
+        let v = match rs {
+            Stmt::Stmt { sgl_stmts: a} => a,
+        };
+        for i in v.into_iter() {
+            ret.push(i);
+        }
+        Stmt::Stmt { sgl_stmts: ret }
+    },
+}
+
+pub RestStmt: Stmt = {
+    /* empty */ => {
+        Stmt::Stmt { sgl_stmts: vec![] }
+    },
+    ";" <s:SglStmt> <ss:RestStmt> => {
+        let mut ret = vec![];
+        ret.push(s);
+        let v = match ss {
+            Stmt::Stmt { sgl_stmts: a } => a,
+        };
+        for i in v.into_iter() {
+            ret.push(i);
+        }
+        Stmt::Stmt { sgl_stmts: ret }
+    },
+}
+
+pub SglStmt: SglStmt = {
+    "do" <e:Expr> => {
+        SglStmt::Do { act: *e }
+    },
+    <id:Ident> "=" <e:Expr> => {
+        SglStmt::Ass { dst: *id, src: *e }
+    },
+}
+
+pub Literal: Box<Expr> = {
+    <s:r"[0-9]+"> => {
+        Box::new(Expr::IntConst { val: i32::from_str(s).unwrap() })
+    },
+    <s:"true"> => {
+        Box::new(Expr::BoolConst { val: true })
+    },
+    <s:"false"> => {
+        Box::new(Expr::BoolConst { val: false })
+    },
+}
+
+pub Ident: Box<Expr> = {
+    <s:r"[a-z_A-Z][0-9_a-z_A-Z]*"> => {
+        Box::new(Expr::IdExpr { ident: String::from(s) })
+    },
+}
+
+pub PrimExpr: Box<Expr> = {
+    <l:Literal> => {
+        l
+    },
+    <i:Ident> => {
+        i
+    },
+    "(" <e:Expr> ")" => {
+        e
+    },
+    "action" "{" <a:Stmt> "}" => {
+        Box::new(Expr::Action { stmt: a })
+    },
+    <name:r"[a-z_A-Z][0-9_a-z_A-Z]*"> "." <id:Ident> => {
+        Box::new(Expr::Member { srv_name: String::from(name), member: id })
+    },
+    <pe:PrimExpr> "(" <es:Args> ")" => {
+        Box::new(Expr::Apply { fun: pe, args: es })
+    },
+}
+
+pub Args: Vec<Expr> = {
+    <e:Expr> <es:RestArgs> => {
+        let mut ret = vec![];
+        ret.push(*e);
+        for i in es.into_iter() {
+            ret.push(i);
+        }
+        ret
+    },
+}
+
+pub RestArgs: Vec<Expr> = {
+    /* empty */ => {
+        vec![]
+    },
+    "," <e:Expr> <es:RestArgs> => {
+        let mut ret = vec![];
+        ret.push(*e);
+        for i in es.into_iter() {
+            ret.push(i);
+        }
+        ret
+    },
+}
+
+pub Expr: Box<Expr> = {
+    #[precedence(level="0")]
+    PrimExpr,
+
+    #[precedence(level="1")] #[assoc(side="right")]
+    "-" <e:Expr> => {
+        Box::new(Expr::UopExpr { opd: e, uop: Uop::Neg })
+    },
+    "!" <e:Expr> => {
+        Box::new(Expr::UopExpr { opd: e, uop: Uop::Not })
+    },
+
+    #[precedence(level="2")] #[assoc(side="left")]
+    <e1:Expr> "*" <e2:Expr> => {
+        Box::new(Expr::BopExpr { opd1: e1, opd2: e2, bop: Binop::Mul })
+    },
+    <e1:Expr> "/" <e2:Expr> => {
+        Box::new(Expr::BopExpr { opd1: e1, opd2: e2, bop: Binop::Div })
+    },
+
+    #[precedence(level="3")] #[assoc(side="left")]
+    <e1:Expr> "+" <e2:Expr> => {
+        Box::new(Expr::BopExpr { opd1: e1, opd2: e2, bop: Binop::Add })
+    },
+    <e1:Expr> "-" <e2:Expr> => {
+        Box::new(Expr::BopExpr { opd1: e1, opd2: e2, bop: Binop::Sub })
+    },
+
+    #[precedence(level="4")] #[assoc(side="left")]
+    <e1:Expr> "==" <e2:Expr> => {
+        Box::new(Expr::BopExpr { opd1: e1, opd2: e2, bop: Binop::Eq })
+    },
+    <e1:Expr> "<" <e2:Expr> => {
+        Box::new(Expr::BopExpr { opd1: e1, opd2: e2, bop: Binop::Lt })
+    },
+    <e1:Expr> ">" <e2:Expr> => {
+        Box::new(Expr::BopExpr { opd1: e1, opd2: e2, bop: Binop::Gt })
+    },
+
+    #[precedence(level="5")] #[assoc(side="left")]
+    <e1:Expr> "&&" <e2:Expr> => {
+        Box::new(Expr::BopExpr { opd1: e1, opd2: e2, bop: Binop::And })
+    },
+
+    #[precedence(level="6")] #[assoc(side="left")]
+    <e1:Expr> "||" <e2:Expr> => {
+        Box::new(Expr::BopExpr { opd1: e1, opd2: e2, bop: Binop::Or })
+    },
+
+    #[precedence(level="7")] #[assoc(side="left")]
+    "if" <e1:Expr> "then" <e2:Expr> "else" <e3:Expr> => {
+        Box::new(Expr::IfExpr { cond: e1, then: e2, elze: e3 })
+    },
+
+    #[precedence(level="8")] #[assoc(side="left")]
+    "fn" <id:Par> "=>" <e:Expr> => {
+        let mut pv = vec![];
+        pv.push(*id);
+        Box::new(Expr::Lambda { pars: pv, body: e })
+    },
+    "fn" <ps:Pars> "=>" <e:Expr> => {
+        Box::new(Expr::Lambda { pars: ps, body: e })
+    },
+}
+
+pub Par: Box<Expr> = {
+    Ident,
+}
+
+pub Pars: Vec<Expr> = {
+    "(" <id:Par> <pr:RestPars> ")" => {
+        let mut ret = vec![];
+        ret.push(*id);
+        for i in pr.into_iter() {
+            ret.push(i);
+        }
+        ret
+    }
+}
+
+pub RestPars: Vec<Expr> = {
+    /* empty */ => {
+        vec![]
+    },
+    "," <id:Ident> <ps:RestPars> => {
+        let mut ret = vec![];
+        ret.push(*id);
+        for i in ps.into_iter() {
+            ret.push(i);
+        }
+        ret
+    }
+}

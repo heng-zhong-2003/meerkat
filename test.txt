@@ -1,0 +1,18 @@
+sigma_m:
+{ "default#meta#2": Tyvar { name: "default#tyvar#0" }
+, "default#meta#0": Int
+, "default#meta#3": Meta { name: "default#meta#2" }
+, "default#meta#4": Int
+, "default#meta#5": Int
+, "default#meta#1": Action }
+
+sigma_v:
+{ "a": Poly { tyvars: [], poly_type: Meta { name: "default#meta#5" } }
+, "_count": Poly { tyvars: [], poly_type: Int }
+, "count": Poly { tyvars: [], poly_type: Int }
+, "id": Poly { tyvars: [ Tyvar { name: "default#tyvar#0" } ]
+             , poly_type: Fun { par_types: [ Meta { name: "default#meta#2" } ]
+                              , ret_type: Meta { name: "default#meta#3" } } }
+, "add": Poly { tyvars: []
+              , poly_type: Fun { par_types: [ Meta { name: "default#meta#0" } ]
+                               , ret_type: Meta { name: "default#meta#1" } } } }

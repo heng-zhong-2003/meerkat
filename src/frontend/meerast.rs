@@ -1,5 +1,6 @@
 trait AstNode {}
 
+impl AstNode for ReplInput {}
 #[derive(Debug, Clone)]
 pub enum ReplInput {
     Service(Service),
@@ -10,20 +11,23 @@ pub enum ReplInput {
     Exit,
 }
 
+impl AstNode for Program {}
 #[derive(Debug, Clone)]
 pub enum Program {
     Prog { services: Vec<Service> },
 }
 
+impl AstNode for Service {}
 #[derive(Debug, Clone)]
 pub enum Service {
-    Svc { name: String, decls: Vec<Decl> },
+    Srv { name: String, decls: Vec<Decl> },
 }
 
+impl AstNode for Decl {}
 #[derive(Debug, Clone)]
 pub enum Decl {
     Import {
-        svc_name: String,
+        srv_name: String,
     },
     VarDecl {
         name: String,
@@ -36,17 +40,20 @@ pub enum Decl {
     },
 }
 
+impl AstNode for Stmt {}
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Stmt {
     Stmt { sgl_stmts: Vec<SglStmt> },
 }
 
+impl AstNode for SglStmt {}
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SglStmt {
     Do { act: Expr },
     Ass { dst: Expr, src: Expr },
 }
 
+impl AstNode for Expr {}
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Expr {
     IdExpr {
@@ -62,8 +69,8 @@ pub enum Expr {
         stmt: Stmt,
     },
     Member {
-        svc_name: String,
-        mbr_name: String,
+        srv_name: String,
+        member: Box<Expr>,
     },
     Apply {
         fun: Box<Expr>,
@@ -84,7 +91,7 @@ pub enum Expr {
         elze: Box<Expr>,
     },
     Lambda {
-        pars: Vec<String>,
+        pars: Vec<Expr>,
         body: Box<Expr>,
     },
 }
