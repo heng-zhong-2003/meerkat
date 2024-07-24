@@ -6,6 +6,7 @@ pub enum ReplInput {
     Service(Service),
     Do(SglStmt),
     Decl(Decl),
+    Update(Decl),
     Open(String),
     Close,
     Exit,

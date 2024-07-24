@@ -20,7 +20,7 @@ async fn main() {
     let srvs = match ast {
         meerast::Program::Prog { services } => services,
     }; */
-    let (tx, rx) = mpsc::channel(100);
+    /* let (tx, rx) = mpsc::channel(100);
     let _ = tokio::spawn(srvmanager_proc::manager_proc(tx));
-    let _ = tokio::spawn(defworker_proc::defworker_proc(rx)).await;
+    let _ = tokio::spawn(defworker_proc::defworker_proc(rx)).await; */
 }

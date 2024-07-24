@@ -4,6 +4,21 @@ use std::str::FromStr;
 
 grammar;
 
+pub ReplInput: ReplInput = {
+    "do" <e:Expr> => {
+        ReplInput::Do(SglStmt::Do(*e))
+    },
+    <d:Decl> => {
+        ReplInput::Decl(d)
+    },
+    "update" <d:Decl> => {
+        ReplInput::Update(d)
+    },
+    "exit" => {
+        ReplInput::exit
+    },
+}
+
 pub Program: Program = {
     /* empty */ => {
         Program::Prog { services: vec![] }
