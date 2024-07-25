@@ -14,11 +14,11 @@ pub enum Message {
     /* Manager to worker messages */
     InitVar {
         var_name: String,
-        value: meerast::Expr,
+        var_expr: meerast::Expr,
     },
     InitDef {
         def_name: String,
-        value: meerast::Expr,
+        def_expr: meerast::Expr,
     },
     AddSenderToSucc {
         sender: mpsc::Sender<Message>,
@@ -27,11 +27,11 @@ pub enum Message {
     /* Worker to manager messages */
     AppriseVal {
         worker_name: String,
-        worker_value: Val,
+        worker_value: Option<Val>,
     },
     /* Inter-worker messages */
     PredUpdatedTo {
         pred_name: String,
-        pred_value: Val,
+        pred_value: Option<Val>,
     },
 }

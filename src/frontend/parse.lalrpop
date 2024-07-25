@@ -6,7 +6,7 @@ grammar;
 
 pub ReplInput: ReplInput = {
     "do" <e:Expr> => {
-        ReplInput::Do(SglStmt::Do(*e))
+        ReplInput::Do(SglStmt::Do { act: *e })
     },
     <d:Decl> => {
         ReplInput::Decl(d)
@@ -15,7 +15,7 @@ pub ReplInput: ReplInput = {
         ReplInput::Update(d)
     },
     "exit" => {
-        ReplInput::exit
+        ReplInput::Exit
     },
 }
 
