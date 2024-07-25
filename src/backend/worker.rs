@@ -50,6 +50,14 @@ impl Worker {
             message::Message::InitVar { var_name, var_expr } => {
                 *name = var_name.clone();
                 *curr_val = Some(Worker::compute_val(var_expr, replica));
+
+                let msg = message::Message::PredUpdatedTo {
+                    pred_name: name.clone(),
+                    pred_value: curr_val.clone(),
+                };
+                for succ in senders_to_succs.iter() {
+                    let _ = succ.send(msg.clone()).await;
+                }
             }
             message::Message::InitDef {
                 def_name,
@@ -58,6 +66,14 @@ impl Worker {
                 *name = def_name.clone();
                 *def_expr = Some(def_val.clone());
                 *curr_val = Some(Worker::compute_val(def_val, replica));
+
+                let msg = message::Message::PredUpdatedTo {
+                    pred_name: name.clone(),
+                    pred_value: curr_val.clone(),
+                };
+                for succ in senders_to_succs.iter() {
+                    let _ = succ.send(msg.clone()).await;
+                }
             }
             message::Message::AddSenderToSucc { sender } => {
                 senders_to_succs.push(sender.clone());
@@ -106,7 +122,11 @@ impl Worker {
         replica: &HashMap<String, message::Val>,
     ) -> message::Val {
         match expr {
-            meerast::Expr::IdExpr { ident } => replica.get(ident).expect("").clone(),
+            meerast::Expr::IdExpr { ident } => {
+                println!("identifier expr {}", ident);
+                println!("replica: {:?}", replica);
+                replica.get(ident).expect("").clone()
+            }
             meerast::Expr::IntConst { val } => message::Val::Int(val.clone()),
             meerast::Expr::BoolConst { val } => message::Val::Bool(val.clone()),
             meerast::Expr::Action { stmt: _ } => message::Val::Action(expr.clone()),

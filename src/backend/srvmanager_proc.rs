@@ -77,7 +77,11 @@ impl ServiceManager {
         for n in subscribers.iter() {
             subscriber_addrs.push((worker_inboxes.get(n)).expect("Worker not exists").clone());
         }
-        let worker = Worker::new(rcvr, sender_to_manager.clone(), subscriber_addrs, name);
+        let worker = Worker::new(
+            rcvr, 
+            sender_to_manager.clone(), 
+            subscriber_addrs, 
+            name);
         tokio::spawn(run_worker(worker));
 
         worker_inboxes.insert(name.to_string(), sndr);
