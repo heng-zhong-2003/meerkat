@@ -21,9 +21,11 @@ pub struct Worker {
 
 impl Worker {
     pub fn new(
+        // from service manager
         inbox: mpsc::Receiver<message::Message>,
         sender_to_manager: mpsc::Sender<message::Message>,
         senders_to_succs: Vec<mpsc::Sender<message::Message>>,
+        // new name to actor 
         name: &str,
     ) -> Worker {
         Worker {
