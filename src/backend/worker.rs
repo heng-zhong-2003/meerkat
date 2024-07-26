@@ -13,7 +13,7 @@ pub struct Worker {
     pub inbox: mpsc::Receiver<message::Message>,
     pub sender_to_manager: mpsc::Sender<message::Message>,
     pub senders_to_succs: Vec<mpsc::Sender<message::Message>>,
-    pub replica: HashMap<String, message::Val>,
+    pub replica: HashMap<String, Option<message::Val>>,
     pub curr_val: Option<message::Val>,
     pub def_expr: Option<meerast::Expr>, /* Is `Some` only for def's */
     pub name: String,
@@ -24,17 +24,18 @@ impl Worker {
         // from service manager
         inbox: mpsc::Receiver<message::Message>,
         sender_to_manager: mpsc::Sender<message::Message>,
-        senders_to_succs: Vec<mpsc::Sender<message::Message>>,
-        // new name to actor 
+        // new to actor 
         name: &str,
+        replica: HashMap<String, Option<message::Val>>,
+        def_expr: Option<meerast::Expr>,
     ) -> Worker {
         Worker {
             inbox,
             sender_to_manager,
-            senders_to_succs,
-            replica: HashMap::new(),
+            senders_to_succs: Vec::new(),
+            replica,
             curr_val: None,
-            def_expr: None,
+            def_expr,
             name: name.to_string(),
         }
     }
@@ -42,7 +43,7 @@ impl Worker {
     pub async fn handle_message(
         sender_to_manager: &mpsc::Sender<message::Message>,
         senders_to_succs: &mut Vec<mpsc::Sender<message::Message>>,
-        replica: &mut HashMap<String, message::Val>,
+        replica: &mut HashMap<String, Option<message::Val>>,
         curr_val: &mut Option<message::Val>,
         def_expr: &mut Option<meerast::Expr>,
         name: &mut String,
@@ -61,30 +62,30 @@ impl Worker {
                     let _ = succ.send(msg.clone()).await;
                 }
             }
-            message::Message::InitDef {
-                def_name,
-                def_expr: def_val,
-            } => {
-                *name = def_name.clone();
-                *def_expr = Some(def_val.clone());
-                *curr_val = Some(Worker::compute_val(def_val, replica));
+            // message::Message::InitDef {
+            //     def_name,
+            //     def_expr: def_val,
+            // } => {
+            //     *name = def_name.clone();
+            //     *def_expr = Some(def_val.clone());
+            //     *curr_val = Some(Worker::compute_val(def_val, replica));
 
-                let msg = message::Message::PredUpdatedTo {
-                    pred_name: name.clone(),
-                    pred_value: curr_val.clone(),
-                };
-                for succ in senders_to_succs.iter() {
-                    let _ = succ.send(msg.clone()).await;
-                }
-            }
+            //     let msg = message::Message::PredUpdatedTo {
+            //         pred_name: name.clone(),
+            //         pred_value: curr_val.clone(),
+            //     };
+            //     for succ in senders_to_succs.iter() {
+            //         let _ = succ.send(msg.clone()).await;
+            //     }
+            // }
             message::Message::AddSenderToSucc { sender } => {
                 senders_to_succs.push(sender.clone());
-                let _ = sender
-                    .send(message::Message::PredUpdatedTo {
-                        pred_name: name.clone(),
-                        pred_value: curr_val.clone(),
-                    })
-                    .await;
+                // let _ = sender
+                //     .send(message::Message::PredUpdatedTo {
+                //         pred_name: name.clone(),
+                //         pred_value: curr_val.clone(),
+                //     })
+                //     .await;
             }
             message::Message::RetrieveVal => {
                 let _ = sender_to_manager
@@ -105,15 +106,23 @@ impl Worker {
                 pred_value,
             } => {
                 if let Some(pred_value) = pred_value {
-                    replica.insert(pred_name.clone(), pred_value.clone());
-                    /* Re-evaluate curr_val */
+                    replica.insert(pred_name.clone(), Some(pred_value.clone()));
+                    // Re-evaluate curr_val 
                     *curr_val = Some(Worker::compute_val(
                         match def_expr {
                             Some(e) => e,
-                            None => panic!(),
+                            None => panic!("from {:?}, {:?} get {:?}",pred_name, name, def_expr),
                         },
                         replica,
                     ));
+                    // propagate 
+                    let msg = message::Message::PredUpdatedTo {
+                        pred_name: name.clone(),
+                        pred_value: curr_val.clone(),
+                    };
+                    for succ in senders_to_succs.iter() {
+                        let _ = succ.send(msg.clone()).await;
+                    }
                 }
             }
         }
@@ -121,13 +130,13 @@ impl Worker {
 
     pub fn compute_val(
         expr: &meerast::Expr,
-        replica: &HashMap<String, message::Val>,
+        replica: &HashMap<String, Option<message::Val>>,
     ) -> message::Val {
         match expr {
             meerast::Expr::IdExpr { ident } => {
-                println!("identifier expr {}", ident);
-                println!("replica: {:?}", replica);
-                replica.get(ident).expect("").clone()
+                println!("{:?}",ident);
+                println!("{:?}",replica);
+                replica.get(ident).expect("").as_ref().expect("").clone()
             }
             meerast::Expr::IntConst { val } => message::Val::Int(val.clone()),
             meerast::Expr::BoolConst { val } => message::Val::Bool(val.clone()),

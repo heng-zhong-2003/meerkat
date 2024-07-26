@@ -4,6 +4,8 @@ use inline_colorization::*;
 use std::collections::{HashMap, HashSet};
 use tokio::sync::mpsc;
 
+use super::message;
+
 const BUFFER_SIZE: usize = 1024;
 
 async fn run_worker(mut worker: Worker) {
@@ -60,12 +62,15 @@ impl ServiceManager {
         }
     }
 
-    pub fn create_worker(
+    pub async fn create_worker(
+        // specific to worker
         name: &str,
         workertype: VarOrDef,
+        readset: &Vec<String>,
+        def_expr: Option<meerast::Expr>,
+        // cloned from service manager
         sender_to_manager: mpsc::Sender<Message>,
-        subscribers: &HashSet<String>,
-
+        // borrowed from service manager
         worker_inboxes: &mut HashMap<String, mpsc::Sender<Message>>,
         locks: &mut HashMap<String, Option<LockType>>,
         typenv: &mut HashMap<String, Option<typecheck::Type>>,
@@ -73,22 +78,33 @@ impl ServiceManager {
         dependgraph: &mut HashMap<String, HashSet<String>>,
     ) {
         let (sndr, rcvr) = mpsc::channel(BUFFER_SIZE);
-        let mut subscriber_addrs = vec![];
-        for n in subscribers.iter() {
-            subscriber_addrs.push((worker_inboxes.get(n)).expect("Worker not exists").clone());
+        // we notify all dependencies that we want to subscribe them
+        // we assume all dependencies should exist now
+        let mut replica = HashMap::new();
+        for n in readset.iter() {
+            let addr = (worker_inboxes.get(n))
+            .expect("Dependency not exists when creating a worker").clone();
+            let msg = Message::AddSenderToSucc { sender: sndr.clone() };
+            replica.insert(n.to_string(), None);
+            let _ = addr.send(msg).await;
         }
         let worker = Worker::new(
             rcvr, 
             sender_to_manager.clone(), 
-            subscriber_addrs, 
-            name);
+            name,
+            replica,
+            def_expr,
+        );
+
         tokio::spawn(run_worker(worker));
 
         worker_inboxes.insert(name.to_string(), sndr);
         locks.insert(name.to_string(), None);
         typenv.insert(name.to_string(), None);
         var_or_def_env.insert(name.to_string(), workertype);
-        dependgraph.insert(name.to_string(), subscribers.clone());
+
+        // todo!("update dependency graph");
+        // dependgraph.insert(name.to_string(), subscribers.clone());
     }
 
     pub async fn init_var_worker(
@@ -104,18 +120,18 @@ impl ServiceManager {
         let _ = worker_addr.send(msg).await.expect("Init val fails");
     }
 
-    pub async fn init_def_worker(
-        worker_inboxes: &HashMap<String, mpsc::Sender<Message>>,
-        name: &str,
-        def_init_expr: meerast::Expr,
-    ) {
-        let worker_addr = worker_inboxes.get(name).unwrap();
-        let msg = Message::InitDef {
-            def_name: name.to_string(),
-            def_expr: def_init_expr,
-        };
-        let _ = worker_addr.send(msg).await.expect("Init def fails");
-    }
+    // pub async fn init_def_worker(
+    //     worker_inboxes: &HashMap<String, mpsc::Sender<Message>>,
+    //     name: &str,
+    //     def_init_expr: meerast::Expr,
+    // ) {
+    //     let worker_addr = worker_inboxes.get(name).unwrap();
+    //     let msg = Message::InitDef {
+    //         def_name: name.to_string(),
+    //         def_expr: def_init_expr,
+    //     };
+    //     let _ = worker_addr.send(msg).await.expect("Init def fails");
+    // }
 
     pub async fn retrieve_val(
         worker_inboxes: &HashMap<String, mpsc::Sender<Message>>,
@@ -137,7 +153,7 @@ impl ServiceManager {
                 worker_name,
                 worker_value,
             } => worker_value,
-            _ => panic!("unexpected message from worker to service manager"),
+            _ => None,
         }
     }
 }

@@ -16,10 +16,10 @@ pub enum Message {
         var_name: String,
         var_expr: meerast::Expr,
     },
-    InitDef {
-        def_name: String,
-        def_expr: meerast::Expr,
-    },
+    // InitDef {
+    //     def_name: String,
+    //     def_expr: meerast::Expr,
+    // },
     AddSenderToSucc {
         sender: mpsc::Sender<Message>,
     },
