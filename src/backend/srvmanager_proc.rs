@@ -83,18 +83,19 @@ impl ServiceManager {
         let mut replica = HashMap::new();
         for n in readset.iter() {
             let addr = (worker_inboxes.get(n))
-            .expect("Dependency not exists when creating a worker").clone();
-            let msg = Message::AddSenderToSucc { sender: sndr.clone() };
+                .expect("Dependency not exists when creating a worker")
+                .clone();
+            let msg = Message::AddSenderToSucc {
+                sender: sndr.clone(),
+            };
             replica.insert(n.to_string(), None);
             let _ = addr.send(msg).await;
         }
-        let worker = Worker::new(
-            rcvr, 
-            sender_to_manager.clone(), 
-            name,
-            replica,
-            def_expr,
+        println!(
+            "{color_blue}create_worker\nname: {}\nreplica: {:?}{color_reset}\n",
+            name, replica
         );
+        let worker = Worker::new(rcvr, sender_to_manager.clone(), name, replica, def_expr);
 
         tokio::spawn(run_worker(worker));
 
