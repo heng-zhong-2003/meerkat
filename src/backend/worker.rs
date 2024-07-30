@@ -105,8 +105,16 @@ impl Worker {
                 pred_name,
                 pred_value,
             } => {
+                println!("Pred updates to receiver {:?}" ,name);
                 if let Some(pred_value) = pred_value {
                     replica.insert(pred_name.clone(), Some(pred_value.clone()));
+                    // check all input args has non-None value 
+                    for (_, v) in replica.iter() {
+                        match v {
+                            Some(_) => {},
+                            None => return,
+                        }
+                    }
                     // Re-evaluate curr_val 
                     *curr_val = Some(Worker::compute_val(
                         match def_expr {
