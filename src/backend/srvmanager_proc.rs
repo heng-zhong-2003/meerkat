@@ -3,6 +3,7 @@ use crate::{backend::worker::Worker, frontend::meerast, frontend::typecheck};
 use inline_colorization::*;
 use std::collections::{HashMap, HashSet};
 use tokio::sync::mpsc;
+use tracing::{self, info};
 
 const BUFFER_SIZE: usize = 1024;
 
@@ -22,11 +23,13 @@ async fn run_worker(mut worker: Worker) {
     }
 }
 
+#[derive(Debug)]
 pub enum LockType {
     RLock,
     WLock,
 }
 
+#[derive(Debug)]
 pub enum VarOrDef {
     Var,
     Def,
@@ -60,6 +63,7 @@ impl ServiceManager {
         }
     }
 
+    #[tracing::instrument(skip(worker_inboxes, locks, /* sender_to_manager, */))]
     pub fn create_worker(
         name: &str,
         workertype: VarOrDef,
@@ -72,16 +76,13 @@ impl ServiceManager {
         var_or_def_env: &mut HashMap<String, VarOrDef>,
         dependgraph: &mut HashMap<String, HashSet<String>>,
     ) {
+        tracing::info!("srvmanager_proc > create_worker called");
         let (sndr, rcvr) = mpsc::channel(BUFFER_SIZE);
         let mut subscriber_addrs = vec![];
         for n in subscribers.iter() {
             subscriber_addrs.push((worker_inboxes.get(n)).expect("Worker not exists").clone());
         }
-        let worker = Worker::new(
-            rcvr, 
-            sender_to_manager.clone(), 
-            subscriber_addrs, 
-            name);
+        let worker = Worker::new(rcvr, sender_to_manager.clone(), subscriber_addrs, name);
         tokio::spawn(run_worker(worker));
 
         worker_inboxes.insert(name.to_string(), sndr);
@@ -91,29 +92,45 @@ impl ServiceManager {
         dependgraph.insert(name.to_string(), subscribers.clone());
     }
 
+    #[tracing::instrument]
     pub async fn init_var_worker(
         worker_inboxes: &mut HashMap<String, mpsc::Sender<Message>>,
         name: &str,
         var_init_val: meerast::Expr,
     ) {
+        info!(
+            name=%name,
+            var_init_val=?var_init_val,
+            worker_inboxes=?worker_inboxes,
+            "srvmanager_proc > init_var_worker called"
+        );
         let worker_addr = worker_inboxes.get(name).unwrap();
         let msg = Message::InitVar {
             var_name: name.to_string(),
             var_expr: var_init_val,
         };
+        info!(send_message=?msg, "srvmanager_proc > init_def_worker > send InitVar message");
         let _ = worker_addr.send(msg).await.expect("Init val fails");
     }
 
+    #[tracing::instrument]
     pub async fn init_def_worker(
         worker_inboxes: &HashMap<String, mpsc::Sender<Message>>,
         name: &str,
         def_init_expr: meerast::Expr,
     ) {
+        info!(
+            name=%name,
+            var_init_val=?def_init_expr,
+            worker_inboxes=?worker_inboxes,
+            "srvmanager_proc > init_def_worker called"
+        );
         let worker_addr = worker_inboxes.get(name).unwrap();
         let msg = Message::InitDef {
             def_name: name.to_string(),
             def_expr: def_init_expr,
         };
+        info!(send_message=?msg, "srvmanager_proc > init_def_worker > send InitDef message");
         let _ = worker_addr.send(msg).await.expect("Init def fails");
     }
 

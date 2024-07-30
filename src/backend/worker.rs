@@ -7,7 +7,9 @@ use crate::{
     backend::message,
     frontend::meerast::{self, Expr},
 };
+use inline_colorization::*;
 use tokio::sync::mpsc;
+use tracing::info;
 
 pub struct Worker {
     pub inbox: mpsc::Receiver<message::Message>,
@@ -37,6 +39,7 @@ impl Worker {
         }
     }
 
+    #[tracing::instrument]
     pub async fn handle_message(
         sender_to_manager: &mpsc::Sender<message::Message>,
         senders_to_succs: &mut Vec<mpsc::Sender<message::Message>>,
@@ -46,6 +49,14 @@ impl Worker {
         name: &mut String,
         msg: &message::Message,
     ) {
+        info!(
+            replica=?replica,
+            curr_val=?curr_val,
+            def_expr=?def_expr,
+            name=%name,
+            msg=?msg,
+            "worker > handle_message called",
+        );
         match msg {
             message::Message::InitVar { var_name, var_expr } => {
                 *name = var_name.clone();
@@ -55,6 +66,10 @@ impl Worker {
                     pred_name: name.clone(),
                     pred_value: curr_val.clone(),
                 };
+                println!(
+                    "{color_red}InitVar, call compute val for\nvar {}\nsend {:?}{color_reset}\n",
+                    var_name, msg,
+                );
                 for succ in senders_to_succs.iter() {
                     let _ = succ.send(msg.clone()).await;
                 }
@@ -71,6 +86,10 @@ impl Worker {
                     pred_name: name.clone(),
                     pred_value: curr_val.clone(),
                 };
+                println!(
+                    "{color_red}InitDef, call compute val for\ndef {}\nsend{:?}{color_reset}\n",
+                    def_name, msg,
+                );
                 for succ in senders_to_succs.iter() {
                     let _ = succ.send(msg.clone()).await;
                 }
@@ -123,8 +142,10 @@ impl Worker {
     ) -> message::Val {
         match expr {
             meerast::Expr::IdExpr { ident } => {
-                println!("identifier expr {}", ident);
-                println!("replica: {:?}", replica);
+                println!(
+                    "{color_green}identifier expr {}, replica: {:?}{color_reset}\n",
+                    ident, replica,
+                );
                 replica.get(ident).expect("").clone()
             }
             meerast::Expr::IntConst { val } => message::Val::Int(val.clone()),

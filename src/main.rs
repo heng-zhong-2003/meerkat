@@ -7,8 +7,13 @@ use backend::worker::Worker;
 use frontend::meerast;
 use frontend::parse;
 use frontend::typecheck;
+use inline_colorization::*;
 use std::collections::{HashMap, HashSet};
+use std::io::Write;
+use std::sync::Arc;
 use std::{env, fs};
+use tokio::io;
+use tracing_subscriber::fmt::MakeWriter;
 
 #[tokio::main]
 async fn main() {
@@ -27,6 +32,27 @@ async fn main() {
     // /* let (tx, rx) = mpsc::channel(100);
     // let _ = tokio::spawn(srvmanager_proc::manager_proc(tx));
     // let _ = tokio::spawn(defworker_proc::defworker_proc(rx)).await; */
+    let file_appender = tracing_appender::rolling::RollingFileAppender::new(
+        tracing_appender::rolling::Rotation::NEVER,
+        "./",
+        "log.txt",
+    );
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    let subscriber = tracing_subscriber::fmt::Subscriber::builder()
+        .with_max_level(tracing::Level::INFO)
+        .with_writer(non_blocking)
+        .event_format(
+            tracing_subscriber::fmt::format()
+                .compact()
+                .with_level(true)
+                .with_target(false)
+                .with_thread_ids(false)
+                .with_thread_names(false),
+        )
+        .pretty()
+        .with_ansi(false)
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("Unable to set global subscriber");
 
     let mut svc_manager = ServiceManager::new();
 
@@ -41,8 +67,7 @@ async fn main() {
         &mut svc_manager.var_or_def_env,
         &mut svc_manager.dependgraph,
     );
-    
-    println!("create worker a");
+
     ServiceManager::create_worker(
         "a",
         VarOrDef::Def,
@@ -54,7 +79,7 @@ async fn main() {
         &mut svc_manager.var_or_def_env,
         &mut svc_manager.dependgraph,
     );
-    
+
     ServiceManager::create_worker(
         "b",
         VarOrDef::Def,
@@ -66,7 +91,7 @@ async fn main() {
         &mut svc_manager.var_or_def_env,
         &mut svc_manager.dependgraph,
     );
-    
+
     ServiceManager::create_worker(
         "x",
         VarOrDef::Var,
@@ -80,63 +105,80 @@ async fn main() {
         &mut svc_manager.dependgraph,
     );
 
-
     let _ = ServiceManager::init_def_worker(
-        &mut svc_manager.worker_inboxes, 
+        &mut svc_manager.worker_inboxes,
         "c",
         meerast::Expr::BopExpr {
-            opd1: Box::new(meerast::Expr::IdExpr { ident: String::from("a") }),
-            opd2: Box::new(meerast::Expr::IdExpr { ident: String::from("b") }),
+            opd1: Box::new(meerast::Expr::IdExpr {
+                ident: String::from("a"),
+            }),
+            opd2: Box::new(meerast::Expr::IdExpr {
+                ident: String::from("b"),
+            }),
             bop: meerast::Binop::Add,
         },
-    ).await;
+    )
+    .await;
 
-    println!("initialize worker a");
     let _ = ServiceManager::init_def_worker(
-        &mut svc_manager.worker_inboxes, 
+        &mut svc_manager.worker_inboxes,
         "a",
         meerast::Expr::BopExpr {
-            opd1: Box::new(meerast::Expr::IdExpr { ident: String::from("x") }),
+            opd1: Box::new(meerast::Expr::IdExpr {
+                ident: String::from("x"),
+            }),
             opd2: Box::new(meerast::Expr::IntConst { val: 1 }),
             bop: meerast::Binop::Add,
         },
-    ).await;
+    )
+    .await;
 
     let _ = ServiceManager::init_def_worker(
-        &mut svc_manager.worker_inboxes, 
+        &mut svc_manager.worker_inboxes,
         "b",
         meerast::Expr::BopExpr {
-            opd1: Box::new(meerast::Expr::IdExpr { ident: String::from("x") }),
+            opd1: Box::new(meerast::Expr::IdExpr {
+                ident: String::from("x"),
+            }),
             opd2: Box::new(meerast::Expr::IntConst { val: 2 }),
             bop: meerast::Binop::Mul,
         },
-    ).await;
+    )
+    .await;
 
     let _ = ServiceManager::init_var_worker(
-        &mut svc_manager.worker_inboxes, 
-        "x", 
-        meerast::Expr::IntConst { val: 1 }
-    ).await;
+        &mut svc_manager.worker_inboxes,
+        "x",
+        meerast::Expr::IntConst { val: 1 },
+    )
+    .await;
 
-    // let xval = ServiceManager::retrieve_val(
-    //     &svc_manager.worker_inboxes, 
-    //     &mut svc_manager.receiver_from_workers,
-    //     "x",
-    // ).await;
-    // let aval = ServiceManager::retrieve_val(
-    //     &svc_manager.worker_inboxes, 
-    //     &mut svc_manager.receiver_from_workers,
-    //     "a",
-    // ).await;
-    // let bval = ServiceManager::retrieve_val(
-    //     &svc_manager.worker_inboxes, 
-    //     &mut svc_manager.receiver_from_workers,
-    //     "b",
-    // ).await;
-    // let cval = ServiceManager::retrieve_val(
-    //     &svc_manager.worker_inboxes, 
-    //     &mut svc_manager.receiver_from_workers,
-    //     "c",
-    // ).await;
-    // println!("x: {:?}, a: {:?}, b: {:?}, c: {:?}", xval, aval, bval, cval);
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+
+    let xval = ServiceManager::retrieve_val(
+        &svc_manager.worker_inboxes,
+        &mut svc_manager.receiver_from_workers,
+        "x",
+    )
+    .await;
+    let aval = ServiceManager::retrieve_val(
+        &svc_manager.worker_inboxes,
+        &mut svc_manager.receiver_from_workers,
+        "a",
+    )
+    .await;
+    let bval = ServiceManager::retrieve_val(
+        &svc_manager.worker_inboxes,
+        &mut svc_manager.receiver_from_workers,
+        "b",
+    )
+    .await;
+    let cval = ServiceManager::retrieve_val(
+        &svc_manager.worker_inboxes,
+        &mut svc_manager.receiver_from_workers,
+        "c",
+    )
+    .await;
+
+    println!("x: {:?}, a: {:?}, b: {:?}, c: {:?}", xval, aval, bval, cval);
 }

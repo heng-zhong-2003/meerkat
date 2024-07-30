@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 trait AstNode {}
 
 impl AstNode for ReplInput {}
