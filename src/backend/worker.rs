@@ -7,6 +7,7 @@ use crate::{
     backend::message,
     frontend::meerast::{self, Expr},
 };
+use inline_colorization::*;
 use tokio::sync::mpsc;
 
 pub struct Worker {
@@ -24,7 +25,7 @@ impl Worker {
         // from service manager
         inbox: mpsc::Receiver<message::Message>,
         sender_to_manager: mpsc::Sender<message::Message>,
-        // new to actor 
+        // new to actor
         name: &str,
         replica: HashMap<String, Option<message::Val>>,
         def_expr: Option<meerast::Expr>,
@@ -58,6 +59,11 @@ impl Worker {
                     pred_name: name.clone(),
                     pred_value: curr_val.clone(),
                 };
+                println!(
+                    "{color_magenta}InitVar, send PredUpdatedTo\npred_name: {}\npred_value: {:?}{color_reset}\n",
+                    name,
+                    curr_val,
+                );
                 for succ in senders_to_succs.iter() {
                     let _ = succ.send(msg.clone()).await;
                 }
@@ -80,12 +86,17 @@ impl Worker {
             // }
             message::Message::AddSenderToSucc { sender } => {
                 senders_to_succs.push(sender.clone());
-                // let _ = sender
-                //     .send(message::Message::PredUpdatedTo {
-                //         pred_name: name.clone(),
-                //         pred_value: curr_val.clone(),
-                //     })
-                //     .await;
+                println!(
+                    "{color_green}handle_message, AddSenderToSucc, send\npred_name: {}\npred_value: {:?}{color_reset}\n",
+                    name,
+                    curr_val,
+                );
+                let _ = sender
+                    .send(message::Message::PredUpdatedTo {
+                        pred_name: name.clone(),
+                        pred_value: curr_val.clone(),
+                    })
+                    .await;
             }
             message::Message::RetrieveVal => {
                 let _ = sender_to_manager
@@ -119,11 +130,11 @@ impl Worker {
                     *curr_val = Some(Worker::compute_val(
                         match def_expr {
                             Some(e) => e,
-                            None => panic!("from {:?}, {:?} get {:?}",pred_name, name, def_expr),
+                            None => panic!("from {:?}, {:?} get {:?}", pred_name, name, def_expr),
                         },
                         replica,
                     ));
-                    // propagate 
+                    // propagate
                     let msg = message::Message::PredUpdatedTo {
                         pred_name: name.clone(),
                         pred_value: curr_val.clone(),
@@ -142,8 +153,8 @@ impl Worker {
     ) -> message::Val {
         match expr {
             meerast::Expr::IdExpr { ident } => {
-                println!("{:?}",ident);
-                println!("{:?}",replica);
+                println!("id expr: {:?}", ident);
+                println!("current replica: {:?}", replica);
                 replica.get(ident).expect("").as_ref().expect("").clone()
             }
             meerast::Expr::IntConst { val } => message::Val::Int(val.clone()),
