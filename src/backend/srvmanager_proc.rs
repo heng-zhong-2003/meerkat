@@ -4,8 +4,6 @@ use inline_colorization::*;
 use std::collections::{HashMap, HashSet};
 use tokio::sync::mpsc;
 
-use super::message;
-
 const BUFFER_SIZE: usize = 1024;
 
 async fn run_worker(mut worker: Worker) {
@@ -151,7 +149,7 @@ impl ServiceManager {
             .expect("No val retrieved from worker")
         {
             Message::AppriseVal {
-                worker_name,
+                worker_name: _,
                 worker_value,
             } => worker_value,
             _ => None,
