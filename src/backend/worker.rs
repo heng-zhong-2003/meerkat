@@ -116,7 +116,7 @@ impl Worker {
                 pred_name,
                 pred_value,
             } => {
-                // println!("Pred updates to receiver {:?}", name);
+                println!("{:?}", msg);
                 if let Some(pred_value) = pred_value {
                     replica.insert(pred_name.clone(), Some(pred_value.clone()));
                     // check all input args has non-None value

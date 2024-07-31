@@ -28,15 +28,15 @@ pub async fn repl() {
         let mut stdout = tokio::io::stdout();
         let stdin = tokio::io::stdin();
         /* display current environment */
-        let mut curr_val_env: HashMap<String, Val> = HashMap::new();
+        let mut curr_val_env: HashMap<String, _> = HashMap::new();
+        // tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         for (name, _) in srv_manager.typenv.iter() {
             let val_of_name = ServiceManager::retrieve_val(
                 &srv_manager.worker_inboxes,
                 &mut srv_manager.receiver_from_workers,
                 name,
             )
-            .await
-            .expect("");
+            .await;
             curr_val_env.insert(name.clone(), val_of_name);
         }
         let _ = stdout
@@ -49,6 +49,7 @@ pub async fn repl() {
                 .await
                 .expect("tokio output error");
         }
+        println!("dependency: {:?}", srv_manager.dependgraph);
 
         /* get and process user input */
         let _ = stdout

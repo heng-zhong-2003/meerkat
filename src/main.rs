@@ -35,139 +35,139 @@ async fn main() {
     //        \     /
     //         \   /
     // def       c = a+b
-    let mut svc_manager = ServiceManager::new();
-
-    ServiceManager::create_worker(
-        "x",
-        VarOrDef::Var,
-        &Vec::new(),
-        None,
-        svc_manager.sender_to_manager.clone(),
-        &mut svc_manager.worker_inboxes,
-        &mut svc_manager.locks,
-        &mut svc_manager.typenv,
-        &mut svc_manager.var_or_def_env,
-        &mut svc_manager.dependgraph,
-    )
-    .await;
-
-    ServiceManager::create_worker(
-        "a",
-        VarOrDef::Def,
-        &vec!["x".to_string()],
-        Some(meerast::Expr::BopExpr {
-            opd1: Box::new(meerast::Expr::IdExpr {
-                ident: String::from("x"),
-            }),
-            opd2: Box::new(meerast::Expr::IntConst { val: 1 }),
-            bop: meerast::Binop::Add,
-        }),
-        svc_manager.sender_to_manager.clone(),
-        &mut svc_manager.worker_inboxes,
-        &mut svc_manager.locks,
-        &mut svc_manager.typenv,
-        &mut svc_manager.var_or_def_env,
-        &mut svc_manager.dependgraph,
-    )
-    .await;
-
-    ServiceManager::create_worker(
-        "b",
-        VarOrDef::Def,
-        &vec!["x".to_string()],
-        Some(meerast::Expr::BopExpr {
-            opd1: Box::new(meerast::Expr::IdExpr {
-                ident: String::from("x"),
-            }),
-            opd2: Box::new(meerast::Expr::IntConst { val: 2 }),
-            bop: meerast::Binop::Mul,
-        }),
-        svc_manager.sender_to_manager.clone(),
-        &mut svc_manager.worker_inboxes,
-        &mut svc_manager.locks,
-        &mut svc_manager.typenv,
-        &mut svc_manager.var_or_def_env,
-        &mut svc_manager.dependgraph,
-    )
-    .await;
-
-    ServiceManager::create_worker(
-        "c",
-        VarOrDef::Def,
-        &vec!["a".to_string(), "b".to_string()],
-        Some(meerast::Expr::BopExpr {
-            opd1: Box::new(meerast::Expr::IdExpr {
-                ident: String::from("a"),
-            }),
-            opd2: Box::new(meerast::Expr::IdExpr {
-                ident: String::from("b"),
-            }),
-            bop: meerast::Binop::Add,
-        }),
-        svc_manager.sender_to_manager.clone(),
-        &mut svc_manager.worker_inboxes,
-        &mut svc_manager.locks,
-        &mut svc_manager.typenv,
-        &mut svc_manager.var_or_def_env,
-        &mut svc_manager.dependgraph,
-    )
-    .await;
+    // let mut svc_manager = ServiceManager::new();
 
     // ServiceManager::create_worker(
-    //     "c",
-    //     VarOrDef::Def,
-    //     &vec!["a".to_string()],
-    //     Some(
-    //         meerast::Expr::BopExpr {
-    //         opd1: Box::new(meerast::Expr::IdExpr { ident: String::from("a") }),
-    //         opd2: Box::new(meerast::Expr::IntConst { val: 2 }),
-    //         bop: meerast::Binop::Mul,
-    //         }
-    //     ),
+    //     "x",
+    //     VarOrDef::Var,
+    //     &Vec::new(),
+    //     None,
     //     svc_manager.sender_to_manager.clone(),
     //     &mut svc_manager.worker_inboxes,
     //     &mut svc_manager.locks,
     //     &mut svc_manager.typenv,
     //     &mut svc_manager.var_or_def_env,
     //     &mut svc_manager.dependgraph,
-    // ).await;
+    // )
+    // .await;
 
-    println!("start initialize worker x");
-    let _ = ServiceManager::init_var_worker(
-        &mut svc_manager.worker_inboxes,
-        "x",
-        meerast::Expr::IntConst { val: 10 },
-    )
-    .await;
+    // ServiceManager::create_worker(
+    //     "a",
+    //     VarOrDef::Def,
+    //     &vec!["x".to_string()],
+    //     Some(meerast::Expr::BopExpr {
+    //         opd1: Box::new(meerast::Expr::IdExpr {
+    //             ident: String::from("x"),
+    //         }),
+    //         opd2: Box::new(meerast::Expr::IntConst { val: 1 }),
+    //         bop: meerast::Binop::Add,
+    //     }),
+    //     svc_manager.sender_to_manager.clone(),
+    //     &mut svc_manager.worker_inboxes,
+    //     &mut svc_manager.locks,
+    //     &mut svc_manager.typenv,
+    //     &mut svc_manager.var_or_def_env,
+    //     &mut svc_manager.dependgraph,
+    // )
+    // .await;
 
-    let xval = ServiceManager::retrieve_val(
-        &svc_manager.worker_inboxes,
-        &mut svc_manager.receiver_from_workers,
-        "x",
-    )
-    .await;
+    // ServiceManager::create_worker(
+    //     "b",
+    //     VarOrDef::Def,
+    //     &vec!["x".to_string()],
+    //     Some(meerast::Expr::BopExpr {
+    //         opd1: Box::new(meerast::Expr::IdExpr {
+    //             ident: String::from("x"),
+    //         }),
+    //         opd2: Box::new(meerast::Expr::IntConst { val: 2 }),
+    //         bop: meerast::Binop::Mul,
+    //     }),
+    //     svc_manager.sender_to_manager.clone(),
+    //     &mut svc_manager.worker_inboxes,
+    //     &mut svc_manager.locks,
+    //     &mut svc_manager.typenv,
+    //     &mut svc_manager.var_or_def_env,
+    //     &mut svc_manager.dependgraph,
+    // )
+    // .await;
 
-    let aval = ServiceManager::retrieve_val(
-        &svc_manager.worker_inboxes,
-        &mut svc_manager.receiver_from_workers,
-        "a",
-    )
-    .await;
-    let bval = ServiceManager::retrieve_val(
-        &svc_manager.worker_inboxes,
-        &mut svc_manager.receiver_from_workers,
-        "b",
-    )
-    .await;
+    // ServiceManager::create_worker(
+    //     "c",
+    //     VarOrDef::Def,
+    //     &vec!["a".to_string(), "b".to_string()],
+    //     Some(meerast::Expr::BopExpr {
+    //         opd1: Box::new(meerast::Expr::IdExpr {
+    //             ident: String::from("a"),
+    //         }),
+    //         opd2: Box::new(meerast::Expr::IdExpr {
+    //             ident: String::from("b"),
+    //         }),
+    //         bop: meerast::Binop::Add,
+    //     }),
+    //     svc_manager.sender_to_manager.clone(),
+    //     &mut svc_manager.worker_inboxes,
+    //     &mut svc_manager.locks,
+    //     &mut svc_manager.typenv,
+    //     &mut svc_manager.var_or_def_env,
+    //     &mut svc_manager.dependgraph,
+    // )
+    // .await;
 
-    let cval = ServiceManager::retrieve_val(
-        &svc_manager.worker_inboxes,
-        &mut svc_manager.receiver_from_workers,
-        "c",
-    )
-    .await;
+    // // ServiceManager::create_worker(
+    // //     "c",
+    // //     VarOrDef::Def,
+    // //     &vec!["a".to_string()],
+    // //     Some(
+    // //         meerast::Expr::BopExpr {
+    // //         opd1: Box::new(meerast::Expr::IdExpr { ident: String::from("a") }),
+    // //         opd2: Box::new(meerast::Expr::IntConst { val: 2 }),
+    // //         bop: meerast::Binop::Mul,
+    // //         }
+    // //     ),
+    // //     svc_manager.sender_to_manager.clone(),
+    // //     &mut svc_manager.worker_inboxes,
+    // //     &mut svc_manager.locks,
+    // //     &mut svc_manager.typenv,
+    // //     &mut svc_manager.var_or_def_env,
+    // //     &mut svc_manager.dependgraph,
+    // // ).await;
 
-    println!("x: {:?}, a: {:?}, b: {:?}, c: {:?}", xval, aval, bval, cval);
+    // println!("start initialize worker x");
+    // let _ = ServiceManager::init_var_worker(
+    //     &mut svc_manager.worker_inboxes,
+    //     "x",
+    //     meerast::Expr::IntConst { val: 10 },
+    // )
+    // .await;
+
+    // let xval = ServiceManager::retrieve_val(
+    //     &svc_manager.worker_inboxes,
+    //     &mut svc_manager.receiver_from_workers,
+    //     "x",
+    // )
+    // .await;
+
+    // let aval = ServiceManager::retrieve_val(
+    //     &svc_manager.worker_inboxes,
+    //     &mut svc_manager.receiver_from_workers,
+    //     "a",
+    // )
+    // .await;
+    // let bval = ServiceManager::retrieve_val(
+    //     &svc_manager.worker_inboxes,
+    //     &mut svc_manager.receiver_from_workers,
+    //     "b",
+    // )
+    // .await;
+
+    // let cval = ServiceManager::retrieve_val(
+    //     &svc_manager.worker_inboxes,
+    //     &mut svc_manager.receiver_from_workers,
+    //     "c",
+    // )
+    // .await;
+
+    // println!("x: {:?}, a: {:?}, b: {:?}, c: {:?}", xval, aval, bval, cval);
     // println!("x: {:?}, a: {:?}, c: {:?}", xval, aval, cval);
     backend::repl::repl().await;
 }
