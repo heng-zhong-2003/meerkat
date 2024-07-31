@@ -10,6 +10,7 @@ use crate::backend::{
     message::{Message, Val},
     srvmanager_proc::{ServiceManager, VarOrDef},
 };
+use crate::frontend::meerast;
 use crate::frontend::{
     meerast::{Decl, ReplInput, SglStmt},
     parse,
@@ -84,7 +85,18 @@ pub async fn repl() {
             crate::frontend::meerast::ReplInput::Service(_) => panic!(),
             crate::frontend::meerast::ReplInput::Do(sgl_stmt) => match sgl_stmt {
                 SglStmt::Do { act } => todo!(),
-                SglStmt::Ass { dst, src } => todo!(),
+                SglStmt::Ass { dst, src } => {
+                    let dst_name = match dst {
+                        meerast::Expr::IdExpr { ident } => ident,
+                        _ => panic!(),
+                    };
+                    let msg = Message::AssignVar {
+                        var_name: dst_name.clone(),
+                        new_val_expr: src,
+                    };
+                    let worker_addr = srv_manager.worker_inboxes.get(&dst_name).unwrap();
+                    let _ = worker_addr.send(msg).await.expect("");
+                }
             },
             crate::frontend::meerast::ReplInput::Decl(decl) => {
                 /* type check decl */

@@ -16,6 +16,10 @@ pub enum Message {
         var_name: String,
         var_expr: meerast::Expr,
     },
+    AssignVar {
+        var_name: String,
+        new_val_expr: meerast::Expr,
+    },
     // InitDef {
     //     def_name: String,
     //     def_expr: meerast::Expr,

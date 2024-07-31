@@ -5,6 +5,9 @@ use std::str::FromStr;
 grammar;
 
 pub ReplInput: ReplInput = {
+    "do" <name:r"[a-z_A-Z][0-9_a-z_A-Z]*"> "=" <e:Expr> => {
+        ReplInput::Do(SglStmt::Ass { dst: Expr::IdExpr { ident: String::from(name) }, src: *e })
+    },
     "do" <e:Expr> => {
         ReplInput::Do(SglStmt::Do { act: *e })
     },

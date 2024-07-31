@@ -68,6 +68,19 @@ impl Worker {
                     let _ = succ.send(msg.clone()).await;
                 }
             }
+            message::Message::AssignVar {
+                var_name,
+                new_val_expr,
+            } => {
+                *curr_val = Some(Worker::compute_val(new_val_expr, replica));
+                let msg = message::Message::PredUpdatedTo {
+                    pred_name: var_name.clone(),
+                    pred_value: curr_val.clone(),
+                };
+                for succ in senders_to_succs.iter() {
+                    let _ = succ.send(msg.clone()).await;
+                }
+            }
             // message::Message::InitDef {
             //     def_name,
             //     def_expr: def_val,
@@ -370,7 +383,10 @@ impl Worker {
 
         let pars = match fun {
             meerast::Expr::Lambda { pars: ps, body: _ } => ps,
-            _ => panic!(),
+            _ => {
+                // println!("incorrect fun: {:?}", fun);
+                panic!();
+            }
         };
         let body = match fun {
             meerast::Expr::Lambda { pars: _, body: bd } => bd.deref(),
