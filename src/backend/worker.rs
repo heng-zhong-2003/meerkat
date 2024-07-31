@@ -59,11 +59,11 @@ impl Worker {
                     pred_name: name.clone(),
                     pred_value: curr_val.clone(),
                 };
-                println!(
-                    "{color_magenta}InitVar, send PredUpdatedTo\npred_name: {}\npred_value: {:?}{color_reset}\n",
-                    name,
-                    curr_val,
-                );
+                // println!(
+                //     "{color_magenta}InitVar, send PredUpdatedTo\npred_name: {}\npred_value: {:?}{color_reset}\n",
+                //     name,
+                //     curr_val,
+                // );
                 for succ in senders_to_succs.iter() {
                     let _ = succ.send(msg.clone()).await;
                 }
@@ -86,11 +86,11 @@ impl Worker {
             // }
             message::Message::AddSenderToSucc { sender } => {
                 senders_to_succs.push(sender.clone());
-                println!(
-                    "{color_green}handle_message, AddSenderToSucc, send\npred_name: {}\npred_value: {:?}{color_reset}\n",
-                    name,
-                    curr_val,
-                );
+                // println!(
+                //     "{color_green}handle_message, AddSenderToSucc, send\npred_name: {}\npred_value: {:?}{color_reset}\n",
+                //     name,
+                //     curr_val,
+                // );
                 let _ = sender
                     .send(message::Message::PredUpdatedTo {
                         pred_name: name.clone(),
@@ -116,17 +116,17 @@ impl Worker {
                 pred_name,
                 pred_value,
             } => {
-                println!("Pred updates to receiver {:?}" ,name);
+                // println!("Pred updates to receiver {:?}", name);
                 if let Some(pred_value) = pred_value {
                     replica.insert(pred_name.clone(), Some(pred_value.clone()));
-                    // check all input args has non-None value 
+                    // check all input args has non-None value
                     for (_, v) in replica.iter() {
                         match v {
-                            Some(_) => {},
+                            Some(_) => {}
                             None => return,
                         }
                     }
-                    // Re-evaluate curr_val 
+                    // Re-evaluate curr_val
                     *curr_val = Some(Worker::compute_val(
                         match def_expr {
                             Some(e) => e,
@@ -153,8 +153,8 @@ impl Worker {
     ) -> message::Val {
         match expr {
             meerast::Expr::IdExpr { ident } => {
-                println!("id expr: {:?}", ident);
-                println!("current replica: {:?}", replica);
+                // println!("id expr: {:?}", ident);
+                // println!("current replica: {:?}", replica);
                 replica.get(ident).expect("").as_ref().expect("").clone()
             }
             meerast::Expr::IntConst { val } => message::Val::Int(val.clone()),

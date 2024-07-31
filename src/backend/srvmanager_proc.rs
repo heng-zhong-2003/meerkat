@@ -89,10 +89,10 @@ impl ServiceManager {
             replica.insert(n.to_string(), None);
             let _ = addr.send(msg).await;
         }
-        println!(
-            "{color_blue}create_worker\nname: {}\nreplica: {:?}{color_reset}\n",
-            name, replica
-        );
+        // println!(
+        //     "{color_blue}create_worker\nname: {}\nreplica: {:?}{color_reset}\n",
+        //     name, replica
+        // );
         let worker = Worker::new(rcvr, sender_to_manager.clone(), name, replica, def_expr);
 
         tokio::spawn(run_worker(worker));

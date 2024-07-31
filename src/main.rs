@@ -169,4 +169,5 @@ async fn main() {
 
     println!("x: {:?}, a: {:?}, b: {:?}, c: {:?}", xval, aval, bval, cval);
     // println!("x: {:?}, a: {:?}, c: {:?}", xval, aval, cval);
+    backend::repl::repl().await;
 }
