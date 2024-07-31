@@ -8,16 +8,22 @@ use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt};
 use crate::backend::{
     dependency,
     message::{Message, Val},
-    srvmanager_proc::ServiceManager,
+    srvmanager_proc::{ServiceManager, VarOrDef},
 };
 use crate::frontend::{
-    meerast::{ReplInput, SglStmt},
-    parse, typecheck,
+    meerast::{Decl, ReplInput, SglStmt},
+    parse,
+    typecheck::{self, FreshMetaGenerator, FreshTyvarGenerator, Type},
 };
 
 pub async fn repl() {
     let mut srv_manager = ServiceManager::new();
     let repl_parser = parse::ReplInputParser::new();
+    let mut sigma_m: HashMap<String, Type> = HashMap::new();
+    let mut sigma_v: HashMap<String, Type> = HashMap::new();
+    let mut pub_access: HashMap<String, bool> = HashMap::new();
+    let mut gen_fresh_meta = FreshMetaGenerator::new("default", 0);
+    let mut gen_fresh_tyvar = FreshTyvarGenerator::new("default", 0);
     loop {
         let mut stdout = tokio::io::stdout();
         let stdin = tokio::io::stdin();
@@ -75,11 +81,98 @@ pub async fn repl() {
 
         match command_ast {
             crate::frontend::meerast::ReplInput::Service(_) => panic!(),
-            crate::frontend::meerast::ReplInput::Do(sgl_stmt) => {
-                todo!()
-            }
+            crate::frontend::meerast::ReplInput::Do(sgl_stmt) => match sgl_stmt {
+                SglStmt::Do { act } => todo!(),
+                SglStmt::Ass { dst, src } => todo!(),
+            },
             crate::frontend::meerast::ReplInput::Decl(decl) => {
-                todo!()
+                /* type check decl */
+                match typecheck::check_decl(
+                    &mut sigma_v,
+                    &mut sigma_m,
+                    &mut pub_access,
+                    &mut gen_fresh_meta,
+                    &mut gen_fresh_tyvar,
+                    &decl,
+                ) {
+                    Ok(_) => {}
+                    Err(_) => {
+                        let _ = stdout
+                            .write_all(&format!("{color_red}type error{color_reset}\n").as_bytes())
+                            .await
+                            .expect("tokio output error");
+                        continue;
+                    }
+                }
+
+                match decl {
+                    Decl::Import { srv_name: _ } => panic!(),
+                    Decl::VarDecl { name, val } => {
+                        ServiceManager::create_worker(
+                            &name,
+                            VarOrDef::Var,
+                            &vec![],
+                            None,
+                            srv_manager.sender_to_manager.clone(),
+                            &mut srv_manager.worker_inboxes,
+                            &mut srv_manager.locks,
+                            &mut srv_manager.typenv,
+                            &mut srv_manager.var_or_def_env,
+                            &mut srv_manager.dependgraph,
+                        )
+                        .await;
+                        ServiceManager::init_var_worker(
+                            &mut srv_manager.worker_inboxes,
+                            &name,
+                            val,
+                        )
+                        .await;
+                    }
+                    Decl::DefDecl {
+                        ref name,
+                        ref val,
+                        is_pub,
+                    } => {
+                        let mut temp_dependgraph = srv_manager.dependgraph.clone();
+                        dependency::decl_dependency(&mut temp_dependgraph, &decl);
+                        match dependency::check_cyclic(&temp_dependgraph) {
+                            Ok(_) => {
+                                srv_manager.dependgraph = temp_dependgraph;
+                            }
+                            Err(_) => {
+                                let _ = stdout
+                                    .write_all(
+                                        &format!(
+                                            "{color_red}cyclic dependency error{color_reset}\n"
+                                        )
+                                        .as_bytes(),
+                                    )
+                                    .await
+                                    .expect("tokio output error");
+                                continue;
+                            }
+                        }
+                        ServiceManager::create_worker(
+                            name,
+                            VarOrDef::Def,
+                            &srv_manager
+                                .dependgraph
+                                .get(name)
+                                .expect("")
+                                .into_iter()
+                                .map(|x| x.clone())
+                                .collect(),
+                            Some(val.clone()),
+                            srv_manager.sender_to_manager.clone(),
+                            &mut srv_manager.worker_inboxes,
+                            &mut srv_manager.locks,
+                            &mut srv_manager.typenv,
+                            &mut srv_manager.var_or_def_env,
+                            &mut srv_manager.dependgraph,
+                        )
+                        .await;
+                    }
+                }
             }
             crate::frontend::meerast::ReplInput::Update(_) => panic!(),
             crate::frontend::meerast::ReplInput::Open(_) => panic!(),
