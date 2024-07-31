@@ -110,13 +110,14 @@ async fn main() {
         &mut svc_manager.typenv,
         &mut svc_manager.var_or_def_env,
         &mut svc_manager.dependgraph,
-    ).await;
+    )
+    .await;
 
     // ServiceManager::create_worker(
     //     "c",
     //     VarOrDef::Def,
     //     &vec!["a".to_string()],
-    //     Some( 
+    //     Some(
     //         meerast::Expr::BopExpr {
     //         opd1: Box::new(meerast::Expr::IdExpr { ident: String::from("a") }),
     //         opd2: Box::new(meerast::Expr::IntConst { val: 2 }),
@@ -130,39 +131,42 @@ async fn main() {
     //     &mut svc_manager.var_or_def_env,
     //     &mut svc_manager.dependgraph,
     // ).await;
-    
 
     println!("start initialize worker x");
     let _ = ServiceManager::init_var_worker(
         &mut svc_manager.worker_inboxes,
         "x",
-        meerast::Expr::IntConst { val: 1 },
+        meerast::Expr::IntConst { val: 10 },
     )
     .await;
 
     let xval = ServiceManager::retrieve_val(
-        &svc_manager.worker_inboxes, 
+        &svc_manager.worker_inboxes,
         &mut svc_manager.receiver_from_workers,
         "x",
-    ).await;
-    
+    )
+    .await;
+
     let aval = ServiceManager::retrieve_val(
-        &svc_manager.worker_inboxes, 
+        &svc_manager.worker_inboxes,
         &mut svc_manager.receiver_from_workers,
         "a",
-    ).await;
+    )
+    .await;
     let bval = ServiceManager::retrieve_val(
-        &svc_manager.worker_inboxes, 
+        &svc_manager.worker_inboxes,
         &mut svc_manager.receiver_from_workers,
         "b",
-    ).await;
-    
+    )
+    .await;
+
     let cval = ServiceManager::retrieve_val(
         &svc_manager.worker_inboxes,
         &mut svc_manager.receiver_from_workers,
         "c",
-    ).await;
-    
+    )
+    .await;
+
     println!("x: {:?}, a: {:?}, b: {:?}, c: {:?}", xval, aval, bval, cval);
     // println!("x: {:?}, a: {:?}, c: {:?}", xval, aval, cval);
 }
