@@ -50,7 +50,7 @@ pub async fn repl() {
                 .await
                 .expect("tokio output error");
         }
-        println!("dependency: {:?}", srv_manager.dependgraph);
+        // println!("dependency: {:?}", srv_manager.dependgraph);
 
         /* get and process user input */
         let _ = stdout
@@ -90,9 +90,9 @@ pub async fn repl() {
                         meerast::Expr::IdExpr { ident } => ident,
                         _ => panic!(),
                     };
-                    let msg = Message::AssignVar {
+                    let msg = Message::InitVar {
                         var_name: dst_name.clone(),
-                        new_val_expr: src,
+                        var_expr: src,
                     };
                     let worker_addr = srv_manager.worker_inboxes.get(&dst_name).unwrap();
                     let _ = worker_addr.send(msg).await.expect("");

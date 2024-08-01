@@ -168,6 +168,7 @@ impl Worker {
             meerast::Expr::IdExpr { ident } => {
                 // println!("id expr: {:?}", ident);
                 // println!("current replica: {:?}", replica);
+                // Bug here: what if ident is the worker itself.
                 replica.get(ident).expect("").as_ref().expect("").clone()
             }
             meerast::Expr::IntConst { val } => message::Val::Int(val.clone()),
