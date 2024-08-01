@@ -178,7 +178,7 @@ impl Worker {
                 member: _,
             } => panic!(),
             meerast::Expr::Apply { fun, args } => {
-                let substed_fun_body = Worker::subst_pars_with_args(fun, args);
+                let substed_fun_body = Worker::subst_pars_with_args(fun, args, replica);
                 Worker::compute_val(&substed_fun_body, replica)
             }
             meerast::Expr::BopExpr { opd1, opd2, bop } => match bop {
@@ -313,7 +313,11 @@ impl Worker {
         }
     }
 
-    pub fn subst_pars_with_args(fun: &meerast::Expr, args: &Vec<meerast::Expr>) -> meerast::Expr {
+    pub fn subst_pars_with_args(
+        fun: &meerast::Expr,
+        args: &Vec<meerast::Expr>,
+        replica: &HashMap<String, Option<message::Val>>,
+    ) -> meerast::Expr {
         fn subst(expr: &mut meerast::Expr, ident_expr_map: &HashMap<String, &meerast::Expr>) {
             match expr {
                 meerast::Expr::IdExpr { ident } => {
@@ -383,6 +387,19 @@ impl Worker {
 
         let pars = match fun {
             meerast::Expr::Lambda { pars: ps, body: _ } => ps,
+            meerast::Expr::IdExpr { ident } => {
+                let fun_lambda = match replica.get(ident).expect("") {
+                    Some(val) => match val {
+                        message::Val::Lambda(lam) => lam,
+                        _ => panic!(),
+                    },
+                    None => panic!(),
+                };
+                match fun_lambda {
+                    meerast::Expr::Lambda { pars: ps, body: _ } => ps,
+                    _ => panic!(),
+                }
+            }
             _ => {
                 // println!("incorrect fun: {:?}", fun);
                 panic!();
@@ -390,6 +407,19 @@ impl Worker {
         };
         let body = match fun {
             meerast::Expr::Lambda { pars: _, body: bd } => bd.deref(),
+            meerast::Expr::IdExpr { ident } => {
+                let fun_lambda = match replica.get(ident).expect("") {
+                    Some(val) => match val {
+                        message::Val::Lambda(lam) => lam,
+                        _ => panic!(),
+                    },
+                    None => panic!(),
+                };
+                match fun_lambda {
+                    meerast::Expr::Lambda { pars: _, body: bd } => bd,
+                    _ => panic!(),
+                }
+            }
             _ => panic!(),
         };
         let mut par_arg_map: HashMap<String, &meerast::Expr> = HashMap::new();
