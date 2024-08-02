@@ -176,6 +176,7 @@ pub async fn repl() {
                                 continue;
                             }
                         }
+                        // println!("{color_blue}{:?}{color_reset}", srv_manager.dependgraph);
                         ServiceManager::create_worker(
                             name,
                             VarOrDef::Def,
@@ -285,7 +286,7 @@ fn subst_idents_in_expr_for_vals<'a>(
                     elze: Box::new(substed_elze),
                 }
             }
-            meerast::Expr::Lambda { pars, body } => todo!(),
+            meerast::Expr::Lambda { pars: _, body: _ } => expr.clone(),
         }
     })
 }
