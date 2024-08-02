@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 use std::f32::consts::PI;
+use std::future::Future;
+use std::pin::Pin;
 
 use inline_colorization::*;
 use tokio;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt};
+use tokio::sync::mpsc;
 
 use crate::backend::{
     dependency,
@@ -16,6 +19,8 @@ use crate::frontend::{
     parse,
     typecheck::{self, FreshMetaGenerator, FreshTyvarGenerator, Type},
 };
+
+use super::srvmanager_proc;
 
 pub async fn repl() {
     let mut srv_manager = ServiceManager::new();
@@ -90,9 +95,15 @@ pub async fn repl() {
                         meerast::Expr::IdExpr { ident } => ident,
                         _ => panic!(),
                     };
+                    let substed_src = subst_idents_in_expr_for_vals(
+                        &src,
+                        &srv_manager.worker_inboxes,
+                        &mut srv_manager.receiver_from_workers,
+                    )
+                    .await;
                     let msg = Message::InitVar {
                         var_name: dst_name.clone(),
-                        var_expr: src,
+                        var_expr: substed_src,
                     };
                     let worker_addr = srv_manager.worker_inboxes.get(&dst_name).unwrap();
                     let _ = worker_addr.send(msg).await.expect("");
@@ -193,4 +204,88 @@ pub async fn repl() {
             crate::frontend::meerast::ReplInput::Exit => std::process::exit(0),
         }
     }
+}
+
+fn subst_idents_in_expr_for_vals<'a>(
+    expr: &'a meerast::Expr,
+    worker_inboxes: &'a HashMap<String, mpsc::Sender<Message>>,
+    receiver_from_workers: &'a mut mpsc::Receiver<Message>,
+) -> Pin<Box<dyn 'a + Future<Output = meerast::Expr>>> {
+    Box::pin(async move {
+        match expr {
+            meerast::Expr::IdExpr { ident } => {
+                let val =
+                    ServiceManager::retrieve_val(worker_inboxes, receiver_from_workers, ident)
+                        .await
+                        .expect("");
+                match val {
+                    Val::Int(num) => meerast::Expr::IntConst { val: num },
+                    Val::Bool(num) => meerast::Expr::BoolConst { val: num },
+                    Val::Action(act) => act,
+                    Val::Lambda(fun) => fun,
+                }
+            }
+            meerast::Expr::IntConst { val: _ } | meerast::Expr::BoolConst { val: _ } => {
+                expr.clone()
+            }
+            meerast::Expr::Action { stmt: _ } => expr.clone(),
+            meerast::Expr::Member {
+                srv_name: _,
+                member: _,
+            } => panic!("not support multi service yet"),
+            meerast::Expr::Apply { fun, args } => {
+                let substed_fun =
+                    subst_idents_in_expr_for_vals(fun, worker_inboxes, receiver_from_workers).await;
+                let mut substed_args: Vec<meerast::Expr> = vec![];
+                for arg in args.iter() {
+                    let substed_arg =
+                        subst_idents_in_expr_for_vals(arg, worker_inboxes, receiver_from_workers)
+                            .await;
+                    substed_args.push(substed_arg);
+                }
+                meerast::Expr::Apply {
+                    fun: Box::new(substed_fun),
+                    args: substed_args,
+                }
+            }
+            meerast::Expr::BopExpr { opd1, opd2, bop } => {
+                let substed_opd1 =
+                    subst_idents_in_expr_for_vals(opd1, worker_inboxes, receiver_from_workers)
+                        .await;
+                let substed_opd2 =
+                    subst_idents_in_expr_for_vals(opd2, worker_inboxes, receiver_from_workers)
+                        .await;
+                meerast::Expr::BopExpr {
+                    opd1: Box::new(substed_opd1),
+                    opd2: Box::new(substed_opd2),
+                    bop: bop.clone(),
+                }
+            }
+            meerast::Expr::UopExpr { opd, uop } => {
+                let substed_opd =
+                    subst_idents_in_expr_for_vals(opd, worker_inboxes, receiver_from_workers).await;
+                meerast::Expr::UopExpr {
+                    opd: Box::new(substed_opd),
+                    uop: uop.clone(),
+                }
+            }
+            meerast::Expr::IfExpr { cond, then, elze } => {
+                let substed_cond =
+                    subst_idents_in_expr_for_vals(cond, worker_inboxes, receiver_from_workers)
+                        .await;
+                let substed_then =
+                    subst_idents_in_expr_for_vals(then, worker_inboxes, receiver_from_workers)
+                        .await;
+                let substed_elze =
+                    subst_idents_in_expr_for_vals(elze, worker_inboxes, receiver_from_workers)
+                        .await;
+                meerast::Expr::IfExpr {
+                    cond: Box::new(substed_cond),
+                    then: Box::new(substed_then),
+                    elze: Box::new(substed_elze),
+                }
+            }
+            meerast::Expr::Lambda { pars, body } => todo!(),
+        }
+    })
 }

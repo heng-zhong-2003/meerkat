@@ -52,6 +52,7 @@ impl Worker {
     ) {
         match msg {
             message::Message::InitVar { var_name, var_expr } => {
+                // println!("{:?}", var_expr);
                 *name = var_name.clone();
                 *curr_val = Some(Worker::compute_val(var_expr, replica));
 
@@ -129,7 +130,7 @@ impl Worker {
                 pred_name,
                 pred_value,
             } => {
-                println!("{:?}", msg);
+                // println!("{:?}", msg);
                 if let Some(pred_value) = pred_value {
                     replica.insert(pred_name.clone(), Some(pred_value.clone()));
                     // check all input args has non-None value
