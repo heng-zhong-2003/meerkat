@@ -1,0 +1,6 @@
+(* Assignment action to function `var`s *)
+
+var f = fn x => x + 1
+def a = f(5)
+
+do f = fn x => x - 10

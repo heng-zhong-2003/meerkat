@@ -1,0 +1,6 @@
+(* Scoping of function parameters *)
+
+var x = 3
+var y = 5
+var f = fn (x, y) => x + y
+def a = f(114, 514)

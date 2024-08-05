@@ -1,0 +1,16 @@
+(* Rhombus dependency
+ *      var x = 1
+ *        /   \
+ *       /     \
+ * def a =    def b =
+ *  x + 1       x * 5
+ *       \     /
+ *        \   /
+ *      def c = a + b *)
+
+var x = 1
+def a = x + 1
+def b = x * 5
+def c = a + b
+
+do x = x + 10
