@@ -1,4 +1,5 @@
 use crate::backend::message::{Message, Val};
+use crate::backend::worker;
 use crate::{backend::worker::Worker, frontend::meerast, frontend::typecheck};
 use inline_colorization::*;
 use std::collections::{HashMap, HashSet};
@@ -27,6 +28,7 @@ pub enum LockType {
     WLock,
 }
 
+#[derive(PartialEq, Eq)]
 pub enum VarOrDef {
     Var,
     Def,
@@ -93,7 +95,17 @@ impl ServiceManager {
         //     "{color_blue}create_worker\nname: {}\nreplica: {:?}{color_reset}\n",
         //     name, replica
         // );
-        let worker = Worker::new(rcvr, sender_to_manager.clone(), name, replica, def_expr);
+        let mut worker = Worker::new(rcvr, sender_to_manager.clone(), name, replica, def_expr);
+
+        if readset.is_empty() && workertype == VarOrDef::Def {
+            worker.curr_val = Some(Worker::compute_val(
+                match worker.def_expr {
+                    Some(ref ex) => ex,
+                    None => panic!(),
+                },
+                &worker.replica,
+            ));
+        }
 
         tokio::spawn(run_worker(worker));
 

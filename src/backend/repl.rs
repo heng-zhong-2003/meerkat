@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::f32::consts::PI;
 use std::future::Future;
 use std::pin::Pin;
 
@@ -19,8 +18,6 @@ use crate::frontend::{
     parse,
     typecheck::{self, FreshMetaGenerator, FreshTyvarGenerator, Type},
 };
-
-use super::srvmanager_proc;
 
 pub async fn repl() {
     let mut srv_manager = ServiceManager::new();
@@ -89,7 +86,7 @@ pub async fn repl() {
         match command_ast {
             crate::frontend::meerast::ReplInput::Service(_) => panic!(),
             crate::frontend::meerast::ReplInput::Do(sgl_stmt) => match sgl_stmt {
-                SglStmt::Do { act } => todo!(),
+                SglStmt::Do { act: _ } => todo!(),
                 SglStmt::Ass { dst, src } => {
                     let dst_name = match dst {
                         meerast::Expr::IdExpr { ident } => ident,
