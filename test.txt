@@ -1,4 +1,0 @@
-Lambda( Lambda { pars: [IdExpr { ident: "n" }]
-               , body: BopExpr { opd1: IdExpr { ident: "n" }
-                               , opd2: IntConst { val: 1 }
-                               , bop: Add } } )
