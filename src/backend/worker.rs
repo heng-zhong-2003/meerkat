@@ -387,6 +387,14 @@ impl Worker {
             }
         }
 
+        let fun_val = Worker::compute_val(fun, replica);
+        let fun = &match fun_val {
+            message::Val::Int(_) => panic!(),
+            message::Val::Bool(_) => panic!(),
+            message::Val::Action(_) => panic!(),
+            message::Val::Lambda(e) => e,
+        };
+
         let pars = match fun {
             meerast::Expr::Lambda { pars: ps, body: _ } => ps,
             meerast::Expr::IdExpr { ident } => {
@@ -403,12 +411,11 @@ impl Worker {
                 }
             }
             _ => {
-                // println!("incorrect fun: {:?}", fun);
                 panic!();
             }
         };
         let body = match fun {
-            meerast::Expr::Lambda { pars: _, body: bd } => bd.deref(),
+            meerast::Expr::Lambda { pars: _, body: bd } => bd.deref().clone(),
             meerast::Expr::IdExpr { ident } => {
                 let fun_lambda = match replica.get(ident).expect("") {
                     Some(val) => match val {
@@ -418,7 +425,7 @@ impl Worker {
                     None => panic!(),
                 };
                 match fun_lambda {
-                    meerast::Expr::Lambda { pars: _, body: bd } => bd,
+                    meerast::Expr::Lambda { pars: _, body: bd } => bd.deref().clone(),
                     _ => panic!(),
                 }
             }
@@ -432,7 +439,7 @@ impl Worker {
             };
             par_arg_map.insert(par_ident, arg);
         }
-        let mut substed_expr: Expr = body.clone();
+        let mut substed_expr: Expr = body;
         subst(&mut substed_expr, &par_arg_map);
         substed_expr
     }
