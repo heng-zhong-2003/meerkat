@@ -1,0 +1,3 @@
+(* Non-`Lambda` expression that evaluates to a function *)
+
+def a = (if true then (fn x => x + 1) else (fn x => x))(3)

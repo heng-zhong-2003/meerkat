@@ -1,0 +1,3 @@
+var f = fn ff => (fn x => ff (x))
+var f_arg = fn x => x + 1
+def g = (f (f_arg)) (42)

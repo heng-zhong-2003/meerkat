@@ -1,0 +1,9 @@
+(* Higher order functions *)
+
+def f = fn x => x + 1
+def apply = fn (fun, arg) => fun(arg)
+def a = apply(f, 10)
+
+def add_x = fn x => (fn y => y + x)
+def add_10 = add_x(10)
+def b = add_10(3)
