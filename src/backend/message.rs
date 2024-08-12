@@ -1,5 +1,7 @@
 use crate::frontend::meerast;
 use tokio::sync::mpsc;
+use crate::backend::transaction;
+use std::{collections::HashSet, hash::Hash};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Val {
@@ -38,4 +40,38 @@ pub enum Message {
         pred_name: String,
         pred_value: Option<Val>,
     },
+}
+
+
+// Message types received by state var nodes
+pub enum Message00 {
+    // Lock acquire is only needed inter-ServiceManagers 
+    // LockAcquire {
+
+    // },
+    // LockRelease {
+
+    // },
+    // LockFail {
+
+    // },
+    // LockGrant {
+
+    // },
+    ReadVarRequest {
+
+    },
+    ReadVarResult {
+
+    },
+    WriteVar {
+
+    },
+    
+    // propagate message type (new_value, P set, R set)
+    PropaMessage {
+        new_val: i32, 
+        provides: HashSet<transaction::Txn>,
+        requires: HashSet<transaction::Txn>,
+    }
 }
