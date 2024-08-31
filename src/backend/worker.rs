@@ -158,6 +158,7 @@ impl Worker {
                     }
                 }
             }
+            _ => panic!(),
         }
     }
 

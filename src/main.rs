@@ -1,9 +1,6 @@
 pub mod backend;
 pub mod frontend;
 
-use backend::srvmanager_proc::ServiceManager;
-use backend::srvmanager_proc::VarOrDef;
-use backend::worker::Worker;
 use frontend::meerast;
 use frontend::parse;
 use frontend::typecheck;
@@ -169,5 +166,5 @@ async fn main() {
 
     // println!("x: {:?}, a: {:?}, b: {:?}, c: {:?}", xval, aval, bval, cval);
     // println!("x: {:?}, a: {:?}, c: {:?}", xval, aval, cval);
-    backend::repl::repl().await;
+    // backend::repl::repl().await;
 }
