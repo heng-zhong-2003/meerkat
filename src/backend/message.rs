@@ -51,6 +51,7 @@ pub enum Message {
     // def worker -> manager
     ReadDefResult {
         txn: Txn,
+        name: String,
         result: Option<Val>,
     },
     // manager -> var worker

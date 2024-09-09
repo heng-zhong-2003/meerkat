@@ -2,7 +2,7 @@ use core::fmt;
 use std::hash::{Hash, Hasher};
 use tokio::time::Instant;
 
-use crate::backend::message::Val;
+use crate::{backend::message::Val, frontend::meerast::Expr};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Debug, Hash)]
 pub struct TxnId {
@@ -22,7 +22,7 @@ impl TxnId {
 #[derive(Clone, Debug)]
 pub struct WriteToName {
     pub name: String,
-    pub expr: Val,
+    pub expr: Expr,
 }
 
 // (txid, writes)

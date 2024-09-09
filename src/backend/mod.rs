@@ -1,9 +1,10 @@
-pub mod defworker_proc;
+pub mod defworker;
 pub mod dependency;
 pub mod message;
+pub mod varworker;
 // pub mod repl;
 // pub mod srvmanager_proc;
+pub mod manager;
 pub mod transaction;
-pub mod varworker_proc;
 // pub mod worker;
 pub mod worker_common;

@@ -11,7 +11,7 @@ pub struct VarWorker {
     pub worker_common: WorkerCommon,
     pub value: Option<Val>,
     pub applied_txns: Vec<Txn>,
-    pub next_requires: HashSet<Txn>,
+    pub next_require: HashSet<Txn>,
 }
 
 impl VarWorker {
@@ -24,7 +24,7 @@ impl VarWorker {
             worker_common: WorkerCommon::new(name, inbox_receiver, sender_to_manager),
             value: None,
             applied_txns: Vec::new(),
-            next_requires: HashSet::new(),
+            next_require: HashSet::new(),
         }
     }
 
@@ -74,6 +74,24 @@ impl VarWorker {
                         require: requires.clone(),
                     },
                 };
+                applied_txns.push(txn.clone());
+                next_requires.insert(txn.clone());
+                for sender_to_succ in worker_common.senders_to_succs.iter() {
+                    let _ = sender_to_succ.send(msg_propa.clone()).await.unwrap();
+                }
+            }
+            Message::ManagerRetrieveRequest => {
+                let msg = Message::ManagerRetrieveResult {
+                    name: worker_common.name.clone(),
+                    result: value.clone(),
+                };
+                let _ = worker_common.sender_to_manager.send(msg).await.unwrap();
+            }
+            Message::SubscriberRequest {
+                subscriber_name: _,
+                sender,
+            } => {
+                worker_common.senders_to_succs.push(sender.clone());
             }
             _ => panic!(),
         }
@@ -82,6 +100,15 @@ impl VarWorker {
     // Arguments when called (considered as a method):
     // var_worker:     mut self
     pub async fn run(mut var_worker: VarWorker) {
-        todo!()
+        while let Some(msg) = var_worker.worker_common.inbox_receiver.recv().await {
+            let _ = VarWorker::handle_message(
+                &mut var_worker.worker_common,
+                &mut var_worker.value,
+                &mut var_worker.applied_txns,
+                &mut var_worker.next_require,
+                &msg,
+            )
+            .await;
+        }
     }
 }
