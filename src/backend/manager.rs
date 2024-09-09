@@ -18,7 +18,7 @@ use crate::{
     },
 };
 
-const BUFFER_SIZE: usize = 1024;
+pub const BUFFER_SIZE: usize = 1024;
 
 #[derive(PartialEq, Eq, Clone, Debug)]
 pub enum VarOrDef {
