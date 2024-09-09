@@ -193,7 +193,7 @@ impl Manager {
         let _ = worker_inbox_sender.send(read_request_msg).await.unwrap();
     }
 
-    fn evaluate_txn_expr(
+    pub fn evaluate_txn_expr(
         expr: &Expr,
         names_to_values: &HashMap<String, Option<Val>>,
     ) -> Option<Val> {

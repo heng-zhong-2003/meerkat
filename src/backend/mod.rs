@@ -7,4 +7,5 @@ pub mod varworker;
 pub mod manager;
 pub mod transaction;
 // pub mod worker;
+pub mod interactive;
 pub mod worker_common;
