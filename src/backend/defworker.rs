@@ -85,7 +85,7 @@ impl DefWorker {
         msg: &Message,
     ) {
         match msg {
-            Message::ReadDefRequest { txn } => {
+            Message::ReadDefRequest { txn, require } => {
                 todo!()
             }
             Message::PropaMessage { propa_change } => {
@@ -101,7 +101,13 @@ impl DefWorker {
                     );
                 }
             }
-            Message::ManagerRetrieveRequest => todo!(),
+            Message::ManagerRetrieveRequest => {
+                let msg = Message::ManagerRetrieveResult {
+                    name: worker_common.name.clone(),
+                    result: value.clone(),
+                };
+                let _ = worker_common.sender_to_manager.send(msg).await;
+            }
             _ => panic!(),
         }
     }

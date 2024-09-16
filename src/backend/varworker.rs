@@ -41,6 +41,7 @@ impl VarWorker {
         next_requires: &mut HashSet<Txn>,
         msg: &Message,
     ) {
+        println!("var worker handle message {:?}", msg);
         match msg {
             Message::ReadVarRequest { txn } => {
                 let latest_txn = HashSet::from([applied_txns[applied_txns.len() - 1].clone()]);
@@ -109,6 +110,7 @@ impl VarWorker {
                 &msg,
             )
             .await;
+            // println!("current var_worker value: {:?}", var_worker.value);
         }
     }
 }

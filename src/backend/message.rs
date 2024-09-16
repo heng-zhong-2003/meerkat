@@ -40,6 +40,7 @@ pub enum Message {
     // manager -> def worker
     ReadDefRequest {
         txn: Txn,
+        require: HashSet<Txn>,
     },
     // var worker -> manager
     ReadVarResult {
@@ -53,6 +54,7 @@ pub enum Message {
         txn: Txn,
         name: String,
         result: Option<Val>,
+        result_provide: HashSet<Txn>,
     },
     // manager -> var worker
     WriteVarRequest {

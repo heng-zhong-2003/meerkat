@@ -103,6 +103,7 @@ impl Manager {
         workers_inboxes_senders: &mut HashMap<String, mpsc::Sender<Message>>,
         receiver_from_workers: &mut mpsc::Receiver<Message>,
     ) {
+        // println!("handle transaction {:?}", txn);
         let mut cnt = 0;
         // Require set of the transaction
         let mut requires_for_txn: HashSet<Txn> = HashSet::new();
@@ -144,6 +145,7 @@ impl Manager {
                         txn: txn_back,
                         name,
                         result,
+                        result_provide,
                     } => {
                         if txn_back == *txn {
                             cnt -= 1;
@@ -187,10 +189,41 @@ impl Manager {
         let var_or_def = var_or_def_env.get(name).unwrap();
         let read_request_msg = match var_or_def {
             VarOrDef::Var => Message::ReadVarRequest { txn: txn.clone() },
-            VarOrDef::Def => Message::ReadDefRequest { txn: txn.clone() },
+            VarOrDef::Def => Message::ReadDefRequest {
+                txn: txn.clone(),
+                require: HashSet::new(), // TODO
+            },
         };
         let worker_inbox_sender = workers_inboxes_senders.get(name).unwrap();
         let _ = worker_inbox_sender.send(read_request_msg).await.unwrap();
+    }
+
+    pub async fn retrieve_val_of(
+        name: &str,
+        workers_inboxes_senders: &HashMap<String, mpsc::Sender<Message>>,
+        receiver_from_workers: &mut mpsc::Receiver<Message>,
+    ) -> Option<Val> {
+        let retrieve_request_msg = Message::ManagerRetrieveRequest;
+        let worker_inbox_sender = workers_inboxes_senders.get(name).unwrap();
+        let _ = worker_inbox_sender
+            .send(retrieve_request_msg)
+            .await
+            .unwrap();
+        if let Some(msg) = receiver_from_workers.recv().await {
+            match msg {
+                Message::ManagerRetrieveResult {
+                    name: result_name,
+                    result,
+                } => {
+                    if result_name != name {
+                        panic!()
+                    }
+                    return result;
+                }
+                _ => panic!(),
+            }
+        }
+        panic!()
     }
 
     pub fn evaluate_txn_expr(
@@ -391,7 +424,10 @@ impl Manager {
         }
     }
 
-    fn subst_idents_in_expr_for_vals(expr: &Expr, names_to_values: &HashMap<String, Val>) -> Expr {
+    pub fn subst_idents_in_expr_for_vals(
+        expr: &Expr,
+        names_to_values: &HashMap<String, Val>,
+    ) -> Expr {
         let mut subst_map: HashMap<String, Val> = HashMap::new();
         for (n, v) in names_to_values.iter() {
             subst_map.insert(n.clone(), v.clone());
@@ -495,7 +531,7 @@ impl Manager {
         }
     }
 
-    fn get_names_in_expr(expr: &Expr) -> HashSet<String> {
+    pub fn get_names_in_expr(expr: &Expr) -> HashSet<String> {
         let mut result: HashSet<String> = HashSet::new();
         match expr {
             Expr::IdExpr { ident } => {
