@@ -55,14 +55,16 @@ impl Manager {
         name: &str,
         sender_to_manager: mpsc::Sender<Message>,
         workers_inboxes_senders: &mut HashMap<String, mpsc::Sender<Message>>,
-        // type_env: &mut HashMap<String, Option<Type>>,
-        // var_or_def_env: &mut HashMap<String, VarOrDef>,
+        type_env: &mut HashMap<String, Option<Type>>,
+        var_or_def_env: &mut HashMap<String, VarOrDef>,
         // dependency_graph: &mut HashMap<String, HashSet<String>>,
     ) {
         let (sndr, rcvr): (mpsc::Sender<Message>, mpsc::Receiver<Message>) =
             mpsc::channel(BUFFER_SIZE);
         let var_worker = VarWorker::new(name, rcvr, sender_to_manager);
         workers_inboxes_senders.insert(name.to_string(), sndr);
+        type_env.insert(name.to_string(), None);
+        var_or_def_env.insert(name.to_string(), VarOrDef::Var);
         tokio::spawn(VarWorker::run(var_worker));
     }
 
@@ -73,6 +75,8 @@ impl Manager {
         replica: HashMap<String, Option<Val>>,
         transitive_deps: HashMap<String, HashSet<String>>,
         workers_inboxes_senders: &mut HashMap<String, mpsc::Sender<Message>>,
+        type_env: &mut HashMap<String, Option<Type>>,
+        var_or_def_env: &mut HashMap<String, VarOrDef>,
     ) {
         let (sndr, rcvr): (mpsc::Sender<Message>, mpsc::Receiver<Message>) =
             mpsc::channel(BUFFER_SIZE);
@@ -94,6 +98,8 @@ impl Manager {
                 })
                 .await;
         }
+        type_env.insert(name.to_string(), None);
+        var_or_def_env.insert(name.to_string(), VarOrDef::Def);
         tokio::spawn(DefWorker::run(def_worker));
     }
 

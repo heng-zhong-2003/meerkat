@@ -129,6 +129,8 @@ pub async fn repl() {
                         &name,
                         manager.sender_to_manager.clone(),
                         &mut manager.workers_inboxes_senders,
+                        &mut manager.type_env,
+                        &mut manager.var_or_def_env,
                     )
                     .await;
                     let assign_txn = Txn {
@@ -177,6 +179,8 @@ pub async fn repl() {
                         replica,
                         todo!(),
                         &mut manager.workers_inboxes_senders,
+                        &mut manager.type_env,
+                        &mut manager.var_or_def_env,
                     )
                     .await;
                 }

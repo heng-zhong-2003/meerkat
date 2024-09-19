@@ -64,6 +64,7 @@ impl VarWorker {
                 requires,
             } => {
                 *value = Some(write_val.clone());
+                println!("write_val: {:?}", write_val);
                 for r in requires.iter() {
                     next_requires.insert(r.clone());
                 }
@@ -77,6 +78,7 @@ impl VarWorker {
                 };
                 applied_txns.push(txn.clone());
                 next_requires.insert(txn.clone());
+                // println!("current value {:?}", value);
                 for sender_to_succ in worker_common.senders_to_succs.iter() {
                     let _ = sender_to_succ.send(msg_propa.clone()).await.unwrap();
                 }
