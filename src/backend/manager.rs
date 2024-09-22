@@ -211,10 +211,11 @@ impl Manager {
     ) -> Option<Val> {
         let retrieve_request_msg = Message::ManagerRetrieveRequest;
         let worker_inbox_sender = workers_inboxes_senders.get(name).unwrap();
-        let _ = worker_inbox_sender
-            .send(retrieve_request_msg)
-            .await
-            .unwrap();
+        println!("retrieve val of {}", name);
+        let _ = match worker_inbox_sender.send(retrieve_request_msg).await {
+            Ok(_) => {}
+            Err(em) => println!("retrieve val send error: {}", em),
+        };
         if let Some(msg) = receiver_from_workers.recv().await {
             match msg {
                 Message::ManagerRetrieveResult {
@@ -239,8 +240,8 @@ impl Manager {
         match expr {
             Expr::IdExpr { ident } => {
                 return match names_to_values.get(ident) {
-                    Some(v) => Some(v.clone().unwrap()),
-                    None => None,
+                    Some(Some(v)) => Some(v.clone()),
+                    _ => None,
                 };
             }
             Expr::IntConst { val } => Some(Val::Int(val.clone())),

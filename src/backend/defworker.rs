@@ -82,8 +82,10 @@ impl DefWorker {
         counter: &mut i32,
         transitive_deps: &HashMap<String, HashSet<String>>,
         propa_changes_to_apply: &mut HashMap<TxnAndName, ExtendedPropaChange>,
+        replica: &mut HashMap<String, Option<Val>>,
         msg: &Message,
     ) {
+        println!("msg: {:?}", msg);
         match msg {
             Message::ReadDefRequest { txn, require } => {
                 todo!()
@@ -108,6 +110,18 @@ impl DefWorker {
                 };
                 let _ = worker_common.sender_to_manager.send(msg).await;
             }
+            Message::SubscriberRequest {
+                subscriber_name,
+                sender,
+            } => {
+                todo!()
+            }
+            Message::SubscriberGrant {
+                predecessor_name,
+                value,
+            } => {
+                replica.insert(predecessor_name.clone(), value.clone());
+            }
             _ => panic!(),
         }
     }
@@ -120,6 +134,7 @@ impl DefWorker {
                 &mut def_worker.counter,
                 &def_worker.transitive_deps,
                 &mut def_worker.propa_changes_to_apply,
+                &mut def_worker.replica,
                 &msg,
             )
             .await;

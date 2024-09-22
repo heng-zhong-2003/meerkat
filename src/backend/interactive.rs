@@ -177,7 +177,11 @@ pub async fn repl() {
                         manager.sender_to_manager.clone(),
                         val.clone(),
                         replica,
-                        todo!(),
+                        dependency::compute_transitive_dependency(
+                            val,
+                            &manager.dependency_graph,
+                            &manager.var_or_def_env,
+                        ),
                         &mut manager.workers_inboxes_senders,
                         &mut manager.type_env,
                         &mut manager.var_or_def_env,

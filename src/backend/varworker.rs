@@ -95,6 +95,12 @@ impl VarWorker {
                 sender,
             } => {
                 worker_common.senders_to_succs.push(sender.clone());
+                let _ = sender
+                    .send(Message::SubscriberGrant {
+                        predecessor_name: worker_common.name.clone(),
+                        value: value.clone(),
+                    })
+                    .await;
             }
             _ => panic!(),
         }

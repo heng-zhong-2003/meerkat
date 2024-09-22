@@ -80,5 +80,8 @@ pub enum Message {
         subscriber_name: String,
         sender: mpsc::Sender<Message>,
     },
-    SubscriberGrant {},
+    SubscriberGrant {
+        predecessor_name: String,
+        value: Option<Val>,
+    },
 }

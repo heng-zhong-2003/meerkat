@@ -1,6 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::frontend::meerast;
+use crate::{
+    backend::manager::{Manager, VarOrDef},
+    frontend::meerast,
+};
 
 pub fn decl_dependency(
     dependency_graph: &mut HashMap<String, HashSet<String>>,
@@ -75,6 +78,44 @@ pub fn expr_dependency(dependency_set: &mut HashSet<String>, expr: &meerast::Exp
             }
             expr_dependency(dependency_set, body);
             *dependency_set = dependency_set.difference(&par_names).cloned().collect();
+        }
+    }
+}
+
+pub fn compute_transitive_dependency(
+    expr: &meerast::Expr,
+    dependency_graph: &HashMap<String, HashSet<String>>,
+    var_or_def: &HashMap<String, VarOrDef>,
+) -> HashMap<String, HashSet<String>> {
+    let mut transitve_deps_of_names: HashMap<String, HashSet<String>> = HashMap::new();
+    let names_in_expr = Manager::get_names_in_expr(expr);
+    for name in names_in_expr.iter() {
+        let mut deps_of_name: HashSet<String> = HashSet::new();
+        match var_or_def.get(name).unwrap() {
+            VarOrDef::Var => continue,
+            VarOrDef::Def => {}
+        }
+        transitive_deps_of_def(name, dependency_graph, var_or_def, &mut deps_of_name);
+        transitve_deps_of_names.insert(name.clone(), deps_of_name);
+    }
+    transitve_deps_of_names
+}
+
+fn transitive_deps_of_def(
+    name: &str,
+    dependency_graph: &HashMap<String, HashSet<String>>,
+    var_or_def: &HashMap<String, VarOrDef>,
+    dependencies: &mut HashSet<String>,
+) {
+    match var_or_def.get(name).unwrap() {
+        VarOrDef::Var => {
+            dependencies.insert(name.to_string());
+        }
+        VarOrDef::Def => {
+            let direct_deps_of_name = dependency_graph.get(name).unwrap();
+            for direct_dep in direct_deps_of_name.iter() {
+                transitive_deps_of_def(direct_dep, dependency_graph, var_or_def, dependencies);
+            }
         }
     }
 }
