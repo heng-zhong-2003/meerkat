@@ -77,7 +77,7 @@ impl DefWorker {
     }
 
     pub async fn handle_message(
-        worker_common: &WorkerCommon,
+        worker_common: &mut WorkerCommon,
         value: &mut Option<Val>,
         counter: &mut i32,
         transitive_deps: &HashMap<String, HashSet<String>>,
@@ -111,10 +111,17 @@ impl DefWorker {
                 let _ = worker_common.sender_to_manager.send(msg).await;
             }
             Message::SubscriberRequest {
-                subscriber_name,
+                subscriber_name: _,
                 sender,
             } => {
-                todo!()
+                worker_common.senders_to_succs.push(sender.clone());
+                let _ = sender
+                    .send(Message::SubscriberGrant {
+                        predecessor_name: worker_common.name.clone(),
+                        value: value.clone(),
+                    })
+                    .await
+                    .unwrap();
             }
             Message::SubscriberGrant {
                 predecessor_name,
@@ -129,7 +136,7 @@ impl DefWorker {
     pub async fn run(mut def_worker: DefWorker) {
         while let Some(msg) = def_worker.worker_common.inbox_receiver.recv().await {
             DefWorker::handle_message(
-                &def_worker.worker_common,
+                &mut def_worker.worker_common,
                 &mut def_worker.value,
                 &mut def_worker.counter,
                 &def_worker.transitive_deps,
@@ -151,6 +158,23 @@ impl DefWorker {
                 &mut def_worker.propa_changes_to_apply,
                 &mut def_worker.replica,
             );
+            if new_value != None {
+                let propa_message = Message::PropaMessage {
+                    propa_change: PropaChange {
+                        name: def_worker.worker_common.name.clone(),
+                        new_val: new_value.unwrap(),
+                        provide: all_provides,
+                        require: all_requires,
+                    },
+                };
+                for sender_to_succ in def_worker.worker_common.senders_to_succs.iter() {
+                    let _ = sender_to_succ
+                        .clone()
+                        .send(propa_message.clone())
+                        .await
+                        .unwrap();
+                }
+            }
         }
     }
 

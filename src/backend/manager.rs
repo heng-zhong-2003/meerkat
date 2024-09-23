@@ -592,7 +592,7 @@ impl Manager {
                     result.insert(nm);
                 }
             }
-            Expr::Lambda { pars, body } => {}
+            Expr::Lambda { pars: _, body: _ } => {}
         }
         result
     }
