@@ -211,7 +211,7 @@ impl Manager {
     ) -> Option<Val> {
         let retrieve_request_msg = Message::ManagerRetrieveRequest;
         let worker_inbox_sender = workers_inboxes_senders.get(name).unwrap();
-        println!("retrieve val of {}", name);
+        // println!("retrieve val of {}", name);
         let _ = match worker_inbox_sender.send(retrieve_request_msg).await {
             Ok(_) => {}
             Err(em) => println!("retrieve val send error: {}", em),

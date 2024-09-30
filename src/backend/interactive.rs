@@ -44,10 +44,10 @@ pub async fn repl() {
                 &mut manager.receiver_from_workers,
             )
             .await;
-            println!("insert {:?}, {:?}", name, val_of_name);
+            // println!("insert {:?}, {:?}", name, val_of_name);
             curr_val_env.insert(name.clone(), val_of_name);
         }
-        println!("curr_val_env: {:?}", curr_val_env);
+        // println!("curr_val_env: {:?}", curr_val_env);
         let _ = stdout
             .write_all(&format!("{color_green}current environment{color_reset}\n").as_bytes())
             .await

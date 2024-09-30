@@ -5,6 +5,8 @@ use std::{
 
 use tokio::sync::mpsc;
 
+use inline_colorization::*;
+
 use crate::{
     backend::{
         manager::Manager,
@@ -85,7 +87,7 @@ impl DefWorker {
         replica: &mut HashMap<String, Option<Val>>,
         msg: &Message,
     ) {
-        println!("msg: {:?}", msg);
+        println!("{} handle msg: {:?}", worker_common.name, msg);
         match msg {
             Message::ReadDefRequest { txn, require } => {
                 todo!()
@@ -135,6 +137,10 @@ impl DefWorker {
 
     pub async fn run(mut def_worker: DefWorker) {
         while let Some(msg) = def_worker.worker_common.inbox_receiver.recv().await {
+            println!(
+                "{color_blue}defworker {} receive msg {:?}{color_reset}",
+                def_worker.worker_common.name, msg
+            );
             DefWorker::handle_message(
                 &mut def_worker.worker_common,
                 &mut def_worker.value,
@@ -149,6 +155,18 @@ impl DefWorker {
                 &def_worker.propa_changes_to_apply,
                 &def_worker.applied_txns,
             );
+            println!(
+                "{color_magenta}defworker {} propa_change_to_apply {:#?}{color_reset}",
+                def_worker.worker_common.name, def_worker.propa_changes_to_apply
+            );
+            println!(
+                "{color_magenta}defworker {} applied_txns {:#?}{color_reset}",
+                def_worker.worker_common.name, def_worker.applied_txns
+            );
+            println!(
+                "{color_magenta}defworker {} find valid_batch {:#?}{color_reset}",
+                def_worker.worker_common.name, valid_batch
+            );
             let (all_provides, all_requires, new_value) = DefWorker::apply_batch(
                 &def_worker.expr,
                 valid_batch,
@@ -159,20 +177,22 @@ impl DefWorker {
                 &mut def_worker.replica,
             );
             if new_value != None {
-                let propa_message = Message::PropaMessage {
-                    propa_change: PropaChange {
-                        name: def_worker.worker_common.name.clone(),
-                        new_val: new_value.unwrap(),
-                        provide: all_provides,
-                        require: all_requires,
-                    },
-                };
-                for sender_to_succ in def_worker.worker_common.senders_to_succs.iter() {
-                    let _ = sender_to_succ
-                        .clone()
-                        .send(propa_message.clone())
-                        .await
-                        .unwrap();
+                if let Message::PropaMessage { propa_change } = msg {
+                    let propa_message = Message::PropaMessage {
+                        propa_change: PropaChange {
+                            name: def_worker.worker_common.name.clone(),
+                            new_val: new_value.unwrap(),
+                            provide: all_provides,
+                            require: all_requires,
+                        },
+                    };
+                    for sender_to_succ in def_worker.worker_common.senders_to_succs.iter() {
+                        let _ = sender_to_succ
+                            .clone()
+                            .send(propa_message.clone())
+                            .await
+                            .unwrap();
+                    }
                 }
             }
         }
@@ -241,6 +261,7 @@ impl DefWorker {
         graph: &HashMap<TxnAndName, ExtendedPropaChange>,
     ) -> bool {
         if visited.get(curr_node) != None || applied_txns.get(&curr_node.txn) != None {
+            println!("dfs find node {:?}", curr_node);
             return true;
         } else {
             match graph.get(curr_node) {
@@ -249,6 +270,7 @@ impl DefWorker {
                     batch_acc.insert(xpropa.clone());
                     for succ in xpropa.deps.iter() {
                         if !DefWorker::dfs(succ, visited, batch_acc, applied_txns, graph) {
+                            println!("dfs cannot find {:?}", succ);
                             return false;
                         }
                     }
@@ -277,12 +299,17 @@ impl DefWorker {
                 &applied_txns_set,
                 &propa_changes_to_apply,
             ) {
+                // println!("{color_magenta}search_batch find a batch: {:#?}", batch_acc);
                 return batch_acc;
             } else {
                 visited = HashSet::new();
                 batch_acc = HashSet::new();
             }
         }
+        // println!(
+        //     "{color_yellow}search_batch cannot find batch: {:?}{color_reset}",
+        //     batch_acc
+        // );
         batch_acc
     }
 
