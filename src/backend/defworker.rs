@@ -155,14 +155,14 @@ impl DefWorker {
                 &def_worker.propa_changes_to_apply,
                 &def_worker.applied_txns,
             );
-            println!(
-                "{color_magenta}defworker {} propa_change_to_apply {:#?}{color_reset}",
-                def_worker.worker_common.name, def_worker.propa_changes_to_apply
-            );
-            println!(
-                "{color_magenta}defworker {} applied_txns {:#?}{color_reset}",
-                def_worker.worker_common.name, def_worker.applied_txns
-            );
+            // println!(
+            //     "{color_magenta}defworker {} propa_change_to_apply {:#?}{color_reset}",
+            //     def_worker.worker_common.name, def_worker.propa_changes_to_apply
+            // );
+            // println!(
+            //     "{color_magenta}defworker {} applied_txns {:#?}{color_reset}",
+            //     def_worker.worker_common.name, def_worker.applied_txns
+            // );
             println!(
                 "{color_magenta}defworker {} find valid_batch {:#?}{color_reset}",
                 def_worker.worker_common.name, valid_batch
